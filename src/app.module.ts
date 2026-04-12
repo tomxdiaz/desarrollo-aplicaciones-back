@@ -1,0 +1,28 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { SupabaseModule } from './supabase/supabase.module';
+import { RestaurantModule } from './restaurant/restaurant.module';
+import { HealthModule } from './health/health.module';
+import { AppUserModule } from './app_user/app_user.module';
+import { AuthModule } from './auth/auth.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath:
+        process.env.ENV_FILE || `.env.${process.env.NODE_ENV || 'dev'}`,
+      ignoreEnvFile: process.env.NODE_ENV === 'prod',
+    }),
+    HealthModule,
+    SupabaseModule,
+    RestaurantModule,
+    AppUserModule,
+    AuthModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
