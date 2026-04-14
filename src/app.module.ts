@@ -7,6 +7,7 @@ import { RestaurantModule } from './restaurant/restaurant.module';
 import { HealthModule } from './health/health.module';
 import { AppUserModule } from './app_user/app_user.module';
 import { AuthModule } from './auth/auth.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from './auth/auth.module';
     HealthModule,
     SupabaseModule,
     RestaurantModule,
+    MenuModule,
     AppUserModule,
     AuthModule,
   ],
