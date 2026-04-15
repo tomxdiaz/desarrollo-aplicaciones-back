@@ -1,15 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-import { Constants } from '../../supabase/database.types';
-import type { Enums } from '../../supabase/database.types';
+import { RestaurantTableStatus } from '../../utils/enums/restaurant-table-status';
 
 export class UpdateTableStatusDto {
   @ApiProperty({
     example: 'FREE',
-    enum: Constants.public.Enums.restaurant_table_status,
+    enum: RestaurantTableStatus,
   })
-  @IsEnum(Constants.public.Enums.restaurant_table_status, {
-    message: 'status must be one of: FREE, OCCUPIED',
+  @IsEnum(RestaurantTableStatus, {
+    message: `status must be one of: ${Object.values(RestaurantTableStatus).join(', ')}`,
   })
-  status!: Enums<'restaurant_table_status'>;
+  status!: RestaurantTableStatus;
 }

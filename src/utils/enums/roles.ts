@@ -1,4 +1,4 @@
-import type { Enums } from '../supabase/database.types';
+import type { Enums } from '../../supabase/database.types';
 
 export const AppRole = {
   SUPER_USER: 'SUPER_USER',

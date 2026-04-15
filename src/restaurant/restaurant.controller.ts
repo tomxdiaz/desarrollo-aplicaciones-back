@@ -7,7 +7,7 @@ import { Param } from '@nestjs/common';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { Tables } from '../supabase/database.types';
-import { AppRole } from '../auth/roles';
+import { AppRole } from '../utils/enums/roles';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 

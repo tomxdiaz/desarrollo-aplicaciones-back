@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsUUID } from 'class-validator';
-import { AppRole } from '../../auth/roles';
+import { AppRole } from '../../utils/enums/roles';
 
 export class UpdateGlobalRoleDto {
   @ApiProperty({
@@ -11,6 +11,8 @@ export class UpdateGlobalRoleDto {
   appUserId!: string;
 
   @ApiProperty({ enum: Object.values(AppRole), example: 'OWNER' })
-  @IsEnum(AppRole, { message: 'role must be one of: SUPER_USER, OWNER, USER' })
+  @IsEnum(AppRole, {
+    message: `role must be one of: ${Object.values(AppRole).join(', ')}`,
+  })
   role!: string;
 }

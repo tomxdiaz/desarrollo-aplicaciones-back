@@ -460,19 +460,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
     ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
     : never;
-
-export const Constants = {
-  public: {
-    Enums: {
-      global_role: ['SUPER_USER', 'OWNER', 'USER'],
-      restaurant_order_status: [
-        'PENDING',
-        'IN_PROCESS',
-        'DELIVERED',
-        'CANCELLED',
-      ],
-      restaurant_staff_role: ['ADMIN', 'CASHIER_PLUS', 'CASHIER'],
-      restaurant_table_status: ['FREE', 'OCCUPIED'],
-    },
-  },
-} as const;
