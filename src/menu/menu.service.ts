@@ -152,7 +152,9 @@ export class MenuService {
     }
   }
 
-  private async getMenuByRestaurantIdOrThrow(restaurantId: number): Promise<Menu> {
+  private async getMenuByRestaurantIdOrThrow(
+    restaurantId: number,
+  ): Promise<Menu> {
     const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
@@ -191,7 +193,9 @@ export class MenuService {
     }
 
     if (!restaurant) {
-      throw new NotFoundException(`restaurant_id '${restaurantId}' was not found`);
+      throw new NotFoundException(
+        `restaurant_id '${restaurantId}' was not found`,
+      );
     }
 
     if (restaurant.owner_id === userId) {
@@ -233,7 +237,9 @@ export class MenuService {
     }
 
     if (!restaurant) {
-      throw new NotFoundException(`restaurant_id '${restaurantId}' was not found`);
+      throw new NotFoundException(
+        `restaurant_id '${restaurantId}' was not found`,
+      );
     }
 
     if (restaurant.owner_id === userId) {

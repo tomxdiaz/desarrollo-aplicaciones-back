@@ -80,5 +80,3 @@ export class MenuController {
     );
   }
 }
-
-
