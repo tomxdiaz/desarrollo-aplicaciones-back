@@ -2,11 +2,13 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import type { Tables } from '../supabase/database.types';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
+import { TableDto } from '../table/dto/table.dto';
 
 type Restaurant = Tables<'restaurant'>;
 
@@ -79,21 +81,37 @@ export class RestaurantService {
     };
   }
 
-  // Get a restaurant by id
+  // Get a restaurant by id, including its tables
   async findOne(id: number): Promise<RestaurantDto> {
     const supabase = this.supabaseService.getClient();
 
     const { data, error } = await supabase
       .from('restaurant')
-      .select('*')
+      .select('*, restaurant_table(*)')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new InternalServerErrorException(error.message);
     }
 
-    return this.toRestaurantDto(data);
+    if (!data) {
+      throw new NotFoundException(`Restaurant with id ${id} not found`);
+    }
+
+    const tables: TableDto[] = (data.restaurant_table ?? []).map((table) => ({
+      id: table.id,
+      restaurant_id: table.restaurant_id,
+      code: table.code,
+      area: table.area,
+      capacity: table.capacity,
+      status: table.status,
+    }));
+
+    return {
+      ...this.toRestaurantDto(data),
+      tables,
+    };
   }
 
   /**

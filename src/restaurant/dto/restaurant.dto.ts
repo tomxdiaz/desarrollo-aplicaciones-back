@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { TableDto } from '../../table/dto/table.dto';
 
 export class RestaurantDto {
   @ApiProperty({ example: 1 })
@@ -26,4 +35,11 @@ export class RestaurantDto {
   @IsOptional()
   @IsString()
   address!: string | null;
+
+  @ApiPropertyOptional({ type: () => TableDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TableDto)
+  tables?: TableDto[];
 }
