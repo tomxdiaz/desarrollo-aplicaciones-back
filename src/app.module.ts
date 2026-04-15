@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { AppUserModule } from './app_user/app_user.module';
 import { AuthModule } from './auth/auth.module';
 import { TableModule } from './table/table.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
@@ -17,11 +18,12 @@ import { TableModule } from './table/table.module';
         process.env.ENV_FILE || `.env.${process.env.NODE_ENV || 'dev'}`,
       ignoreEnvFile: process.env.NODE_ENV === 'prod',
     }),
-    HealthModule,
     SupabaseModule,
-    RestaurantModule,
-    AppUserModule,
+    HealthModule,
     AuthModule,
+    AppUserModule,
+    RestaurantModule,
+    MenuModule,
     TableModule,
   ],
   controllers: [AppController],
