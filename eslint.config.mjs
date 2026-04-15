@@ -38,4 +38,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
     },
   },
+  {
+    files: ['src/supabase/database.types.ts'],
+    rules: {
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+    },
+  },
 );
