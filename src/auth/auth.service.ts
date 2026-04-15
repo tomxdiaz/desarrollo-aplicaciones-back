@@ -27,7 +27,7 @@ export class AuthService {
   async signUp(email: string, password: string): Promise<string> {
     const supabase = this.supabaseService.getClient();
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -36,10 +36,6 @@ export class AuthService {
       throw new InternalServerErrorException(error.message);
     }
 
-    if (!data.session || !data.session.access_token) {
-      throw new InternalServerErrorException('No access token returned');
-    }
-
-    return data.session.access_token;
+    return 'User registered successfully. Please check your email to confirm your account.';
   }
 }

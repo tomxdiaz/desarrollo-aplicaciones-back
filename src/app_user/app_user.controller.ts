@@ -6,7 +6,7 @@ import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { AppRole } from '../auth/roles';
+import { AppRole } from '../utils/enums/roles';
 import type { Tables } from '../supabase/database.types';
 import { UpdateGlobalRoleDto } from './dto/update-role.dto';
 

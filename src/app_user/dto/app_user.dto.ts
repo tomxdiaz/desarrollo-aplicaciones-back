@@ -1,8 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsEnum, IsUUID } from 'class-validator';
-import type { Enums } from '../../supabase/database.types';
-
-type GlobalRole = Enums<'global_role'>;
+import { AppRole } from '../../utils/enums/roles';
 
 export class AppUserDto {
   @ApiProperty({
@@ -16,7 +14,9 @@ export class AppUserDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ enum: ['SUPER_USER', 'OWNER', 'USER'], example: 'USER' })
-  @IsEnum(['SUPER_USER', 'OWNER', 'USER'])
-  global_role!: GlobalRole;
+  @ApiProperty({ enum: AppRole, example: 'USER' })
+  @IsEnum(AppRole, {
+    message: `global_role must be one of: ${Object.values(AppRole).join(', ')}`,
+  })
+  global_role!: AppRole;
 }

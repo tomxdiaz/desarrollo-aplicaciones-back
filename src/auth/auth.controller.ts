@@ -10,12 +10,22 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('sign-in')
-  async signIn(@Body() signInDto: SignInDto): Promise<string> {
-    return await this.authService.signIn(signInDto.email, signInDto.password);
+  async signIn(
+    @Body() signInDto: SignInDto,
+  ): Promise<{ access_token: string }> {
+    const access_token = await this.authService.signIn(
+      signInDto.email,
+      signInDto.password,
+    );
+    return { access_token };
   }
 
   @Post('sign-up')
-  async signUp(@Body() signUpDto: SignUpDto): Promise<string> {
-    return await this.authService.signUp(signUpDto.email, signUpDto.password);
+  async signUp(@Body() signUpDto: SignUpDto): Promise<{ message: string }> {
+    const message = await this.authService.signUp(
+      signUpDto.email,
+      signUpDto.password,
+    );
+    return { message };
   }
 }

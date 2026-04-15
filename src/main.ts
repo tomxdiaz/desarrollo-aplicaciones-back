@@ -16,11 +16,22 @@ async function bootstrap() {
     .setTitle('Provecho! API')
     .setDescription('Provecho! API - Desarrollo de Aplicaciones')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+      },
+      'bearer',
+    )
+    .addSecurityRequirements('bearer')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document, {
     swaggerOptions: {
-      supportedSubmitMethods: [], // Deshabilita probar la API desde Swagger UI
+      // supportedSubmitMethods: [], // Deshabilita probar la API desde Swagger UI
     },
   });
 

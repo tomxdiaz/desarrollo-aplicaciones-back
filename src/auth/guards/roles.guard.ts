@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { Tables } from '../../supabase/database.types';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import type { AppRole } from '../roles';
+import type { AppRole } from '../../utils/enums/roles';
 
 type AppUser = Tables<'app_user'>;
 
