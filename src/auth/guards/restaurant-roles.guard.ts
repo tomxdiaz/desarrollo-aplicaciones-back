@@ -25,7 +25,7 @@ export class RestaurantRolesGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const appUser = request.appUser;
-    const idParam = request.params.id;
+    const idParam = request.params.restaurantId;
     const restaurantId = Array.isArray(idParam)
       ? parseInt(idParam[0], 10)
       : parseInt(idParam, 10);

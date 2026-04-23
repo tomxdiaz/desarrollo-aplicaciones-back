@@ -28,26 +28,26 @@ type AppUser = Tables<'app_user'>;
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
-  @Get('restaurant/:id/menu')
+  @Get('restaurant/:restaurantId/menu')
   async findMenuByRestaurantId(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<MenuDto> {
     return await this.menuService.findMenuByRestaurantId(restaurantId);
   }
 
-  @Get('restaurant/:id/menu/categories')
+  @Get('restaurant/:restaurantId/menu/categories')
   async findCategoriesByRestaurantId(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<CategoryDto[]> {
     return await this.menuService.findCategoriesByRestaurantId(restaurantId);
   }
 
-  @Post('restaurant/:id/menu/categories')
+  @Post('restaurant/:restaurantId/menu/categories')
   @ApiBearerAuth()
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
   @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
   async createCategory(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
     @Body() createCategoryDto: CreateCategoryDto,
   ): Promise<CategoryDto> {
@@ -68,11 +68,11 @@ export class MenuController {
     return await this.menuService.deleteCategory(categoryId, appUser.id);
   }
 
-  @Patch('restaurant/:id/menu')
+  @Patch('restaurant/:restaurantId/menu')
   @ApiBearerAuth()
   @UseGuards(SupabaseAuthGuard)
   async updateMenuName(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
     @Body() updateMenuDto: UpdateMenuDto,
   ): Promise<MenuDto> {
