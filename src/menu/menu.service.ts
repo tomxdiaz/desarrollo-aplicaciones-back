@@ -87,10 +87,8 @@ export class MenuService {
   async updateMenuName(
     restaurantId: number,
     updateMenuDto: UpdateMenuDto,
-    userId: string,
   ): Promise<MenuDto> {
     const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-    await this.assertCanUpdateMenuName(restaurantId, userId);
 
     const supabase = this.supabaseService.getAdminClient();
     const { data, error } = await supabase
@@ -107,9 +105,17 @@ export class MenuService {
     return this.toMenuDto(data);
   }
 
-  async deleteCategory(categoryId: number, userId: string): Promise<void> {
+  async deleteCategory(
+    restaurantId: number,
+    categoryId: number,
+    userId: string,
+  ): Promise<void> {
     const supabase = this.supabaseService.getAdminClient();
 
+    // Get menu for restaurantId
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    // Check category exists and belongs to this menu
     const { data: category, error: categoryError } = await supabase
       .from('category')
       .select('id, menu_id')
@@ -124,24 +130,16 @@ export class MenuService {
       throw new NotFoundException(`category_id '${categoryId}' was not found`);
     }
 
-    const { data: menu, error: menuError } = await supabase
-      .from('menu')
-      .select('restaurant_id')
-      .eq('id', category.menu_id)
-      .maybeSingle();
-
-    if (menuError) {
-      throw new InternalServerErrorException(menuError.message);
-    }
-
-    if (!menu) {
-      throw new NotFoundException(
-        `menu linked to category_id '${categoryId}' was not found`,
+    if (category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'Category does not belong to this restaurant',
       );
     }
 
-    await this.assertCanManageCategories(menu.restaurant_id, userId);
+    // Permission check
+    await this.assertCanManageCategories(restaurantId, userId);
 
+    // Delete
     const { error: deleteError } = await supabase
       .from('category')
       .delete()
@@ -216,50 +214,6 @@ export class MenuService {
     if (!staff || staff.role !== 'CASHIER_PLUS') {
       throw new ForbiddenException(
         'Only restaurant owner or CASHIER_PLUS can manage menu categories',
-      );
-    }
-  }
-
-  private async assertCanUpdateMenuName(
-    restaurantId: number,
-    userId: string,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getAdminClient();
-
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurant')
-      .select('owner_id')
-      .eq('id', restaurantId)
-      .maybeSingle();
-
-    if (restaurantError) {
-      throw new InternalServerErrorException(restaurantError.message);
-    }
-
-    if (!restaurant) {
-      throw new NotFoundException(
-        `restaurant_id '${restaurantId}' was not found`,
-      );
-    }
-
-    if (restaurant.owner_id === userId) {
-      return;
-    }
-
-    const { data: staff, error: staffError } = await supabase
-      .from('restaurant_staff')
-      .select('role')
-      .eq('restaurant_id', restaurantId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (staffError) {
-      throw new InternalServerErrorException(staffError.message);
-    }
-
-    if (!staff || staff.role !== 'CASHIER_PLUS') {
-      throw new ForbiddenException(
-        'Only restaurant owner or CASHIER_PLUS can update menu name',
       );
     }
   }

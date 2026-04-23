@@ -35,6 +35,17 @@ export class MenuController {
     return await this.menuService.findMenuByRestaurantId(restaurantId);
   }
 
+  @Patch('restaurant/:restaurantId/menu')
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  async updateMenuName(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Body() updateMenuDto: UpdateMenuDto,
+  ): Promise<MenuDto> {
+    return await this.menuService.updateMenuName(restaurantId, updateMenuDto);
+  }
+
   @Get('restaurant/:restaurantId/menu/categories')
   async findCategoriesByRestaurantId(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
@@ -58,27 +69,18 @@ export class MenuController {
     );
   }
 
-  @Delete('menu/categories/:categoryId')
+  @Delete('restaurant/:restaurantId/menu/categories/:categoryId')
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
   async deleteCategory(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('categoryId', ParseIntPipe) categoryId: number,
     @CurrentAppUser appUser: AppUser,
   ): Promise<void> {
-    return await this.menuService.deleteCategory(categoryId, appUser.id);
-  }
-
-  @Patch('restaurant/:restaurantId/menu')
-  @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
-  async updateMenuName(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-    @CurrentAppUser appUser: AppUser,
-    @Body() updateMenuDto: UpdateMenuDto,
-  ): Promise<MenuDto> {
-    return await this.menuService.updateMenuName(
+    return await this.menuService.deleteCategory(
       restaurantId,
-      updateMenuDto,
+      categoryId,
       appUser.id,
     );
   }
