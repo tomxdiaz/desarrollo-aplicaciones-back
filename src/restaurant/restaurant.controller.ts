@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
@@ -36,7 +43,7 @@ export class RestaurantController {
 
   // Get a restaurant by id
   @Get(':id')
-  async findOne(@Param('id') id: number): Promise<RestaurantDto> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<RestaurantDto> {
     return await this.restaurantService.findOne(id);
   }
 

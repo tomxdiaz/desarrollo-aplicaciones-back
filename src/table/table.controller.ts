@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -26,7 +27,7 @@ export class TableController {
   // Get all tables for a restaurant
   @Get()
   async findAll(
-    @Param('restaurantId') restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<TableDto[]> {
     return await this.tableService.findAllByRestaurant(restaurantId);
   }
@@ -37,7 +38,7 @@ export class TableController {
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   async create(
-    @Param('restaurantId') restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() createTableDto: CreateTableDto,
   ): Promise<TableDto> {
     return await this.tableService.create(restaurantId, createTableDto);
@@ -49,8 +50,8 @@ export class TableController {
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   async delete(
-    @Param('restaurantId') restaurantId: number,
-    @Param('tableId') tableId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Param('tableId', ParseIntPipe) tableId: number,
   ): Promise<TableDto> {
     return await this.tableService.delete(restaurantId, tableId);
   }
@@ -61,8 +62,8 @@ export class TableController {
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   async updateStatus(
-    @Param('restaurantId') restaurantId: number,
-    @Param('tableId') tableId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Param('tableId', ParseIntPipe) tableId: number,
     @Body() updateTableStatusDto: UpdateTableStatusDto,
   ): Promise<TableDto> {
     return await this.tableService.updateStatus(

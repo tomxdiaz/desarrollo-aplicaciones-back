@@ -4,8 +4,8 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +18,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { MenuDto } from './dto/menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import { MenuService } from './menu.service';
+import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
+import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 
 type AppUser = Tables<'app_user'>;
 
@@ -42,7 +44,8 @@ export class MenuController {
 
   @Post('restaurant/:id/menu/categories')
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
   async createCategory(
     @Param('id', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
