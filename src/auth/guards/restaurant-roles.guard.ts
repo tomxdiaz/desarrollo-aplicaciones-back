@@ -14,6 +14,7 @@ import {
   RESTAURANT_ROLES_KEY,
   RestaurantStaffRole,
 } from '../decorators/restaurant-roles.decorator';
+import { AppRole } from '../../utils/enums/roles';
 
 @Injectable()
 export class RestaurantRolesGuard implements CanActivate {
@@ -26,6 +27,12 @@ export class RestaurantRolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const appUser = request.appUser;
     const idParam = request.params.restaurantId;
+
+    // Allow SUPER_USER to bypass all checks
+    if (appUser && appUser.global_role === AppRole.SUPER_USER) {
+      return true;
+    }
+
     const restaurantId = Array.isArray(idParam)
       ? parseInt(idParam[0], 10)
       : parseInt(idParam, 10);
@@ -47,9 +54,11 @@ export class RestaurantRolesGuard implements CanActivate {
       .select('owner_id')
       .eq('id', restaurantId)
       .single();
+
     if (restaurantError || !restaurant) {
       throw new ForbiddenException('Restaurant not found');
     }
+
     if (restaurant.owner_id === appUser.id) {
       return true;
     }
