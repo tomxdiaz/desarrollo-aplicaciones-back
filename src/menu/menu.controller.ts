@@ -4,8 +4,8 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +18,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { MenuDto } from './dto/menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import { MenuService } from './menu.service';
+import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
+import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 
 type AppUser = Tables<'app_user'>;
 
@@ -26,25 +28,37 @@ type AppUser = Tables<'app_user'>;
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
-  @Get('restaurant/:id/menu')
+  @Get('restaurant/:restaurantId/menu')
   async findMenuByRestaurantId(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<MenuDto> {
     return await this.menuService.findMenuByRestaurantId(restaurantId);
   }
 
-  @Get('restaurant/:id/menu/categories')
+  @Patch('restaurant/:restaurantId/menu')
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  async updateMenuName(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Body() updateMenuDto: UpdateMenuDto,
+  ): Promise<MenuDto> {
+    return await this.menuService.updateMenuName(restaurantId, updateMenuDto);
+  }
+
+  @Get('restaurant/:restaurantId/menu/categories')
   async findCategoriesByRestaurantId(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<CategoryDto[]> {
     return await this.menuService.findCategoriesByRestaurantId(restaurantId);
   }
 
-  @Post('restaurant/:id/menu/categories')
+  @Post('restaurant/:restaurantId/menu/categories')
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
   async createCategory(
-    @Param('id', ParseIntPipe) restaurantId: number,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
     @Body() createCategoryDto: CreateCategoryDto,
   ): Promise<CategoryDto> {
@@ -55,27 +69,18 @@ export class MenuController {
     );
   }
 
-  @Delete('menu/categories/:categoryId')
+  @Delete('restaurant/:restaurantId/menu/categories/:categoryId')
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
   async deleteCategory(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('categoryId', ParseIntPipe) categoryId: number,
     @CurrentAppUser appUser: AppUser,
   ): Promise<void> {
-    return await this.menuService.deleteCategory(categoryId, appUser.id);
-  }
-
-  @Patch('restaurant/:id/menu')
-  @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
-  async updateMenuName(
-    @Param('id', ParseIntPipe) restaurantId: number,
-    @CurrentAppUser appUser: AppUser,
-    @Body() updateMenuDto: UpdateMenuDto,
-  ): Promise<MenuDto> {
-    return await this.menuService.updateMenuName(
+    return await this.menuService.deleteCategory(
       restaurantId,
-      updateMenuDto,
+      categoryId,
       appUser.id,
     );
   }

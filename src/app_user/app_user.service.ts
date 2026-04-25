@@ -41,6 +41,20 @@ export class AppUserService {
     return (data ?? []).map((appUser) => this.toAppUserDto(appUser));
   }
 
+  async findByEmail(email: string): Promise<AppUserDto | null> {
+    const supabase = this.supabaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from('app_user')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+    if (!data) return null;
+    return this.toAppUserDto(data);
+  }
+
   async updateGlobalRole(
     updateGlobalRoleDto: UpdateGlobalRoleDto,
   ): Promise<AppUserDto> {
