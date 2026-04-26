@@ -21,7 +21,7 @@ type AppUser = Tables<'app_user'>;
 
 @ApiTags('orders')
 @Controller('orders')
-export class OrderController {
+export class UserOrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Post()

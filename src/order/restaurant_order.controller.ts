@@ -32,7 +32,7 @@ type AppUser = Tables<'app_user'>;
 
 @ApiTags('restaurant-orders')
 @Controller('restaurants/:restaurantId/orders')
-export class RestaurantOrdersController {
+export class RestaurantOrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Get()
