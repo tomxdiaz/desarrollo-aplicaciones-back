@@ -9,6 +9,7 @@ import { AppUserModule } from './app_user/app_user.module';
 import { AuthModule } from './auth/auth.module';
 import { TableModule } from './table/table.module';
 import { MenuModule } from './menu/menu.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MenuModule } from './menu/menu.module';
     RestaurantModule,
     MenuModule,
     TableModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -10,9 +10,12 @@ import { CategoryDto } from './dto/category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { MenuDto } from './dto/menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
+import { ProductDto } from './dto/product.dto';
+import { CreateProductDto } from './dto/create-product.dto';
 
 type Menu = Tables<'menu'>;
 type Category = Tables<'category'>;
+type Product = Tables<'product'>;
 
 @Injectable()
 export class MenuService {
@@ -62,10 +65,8 @@ export class MenuService {
   async createCategory(
     restaurantId: number,
     createCategoryDto: CreateCategoryDto,
-    userId: string,
   ): Promise<CategoryDto> {
     const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-    await this.assertCanManageCategories(restaurantId, userId);
 
     const supabase = this.supabaseService.getAdminClient();
     const { data, error } = await supabase
@@ -108,7 +109,6 @@ export class MenuService {
   async deleteCategory(
     restaurantId: number,
     categoryId: number,
-    userId: string,
   ): Promise<void> {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -135,9 +135,6 @@ export class MenuService {
         'Category does not belong to this restaurant',
       );
     }
-
-    // Permission check
-    await this.assertCanManageCategories(restaurantId, userId);
 
     // Delete
     const { error: deleteError } = await supabase
@@ -174,48 +171,43 @@ export class MenuService {
     return data;
   }
 
-  private async assertCanManageCategories(
-    restaurantId: number,
-    userId: string,
-  ): Promise<void> {
+  async createProduct(createProductDto: CreateProductDto): Promise<ProductDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurant')
-      .select('owner_id')
-      .eq('id', restaurantId)
-      .maybeSingle();
+    const { data, error } = await supabase
+      .from('product')
+      .insert({
+        category_id: createProductDto.category_id,
+        name: createProductDto.name,
+        description: createProductDto.description,
+        price: createProductDto.price,
+        image: createProductDto.image,
+      })
+      .select('*')
+      .single();
 
-    if (restaurantError) {
-      throw new InternalServerErrorException(restaurantError.message);
+    if (error) {
+      throw new InternalServerErrorException(error.message);
     }
 
-    if (!restaurant) {
-      throw new NotFoundException(
-        `restaurant_id '${restaurantId}' was not found`,
-      );
+    return this.toProductDto(data);
+  }
+
+  async deleteProduct(productId: number): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('product')
+      .delete()
+      .eq('id', productId)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(error.message);
     }
 
-    if (restaurant.owner_id === userId) {
-      return;
-    }
-
-    const { data: staff, error: staffError } = await supabase
-      .from('restaurant_staff')
-      .select('role')
-      .eq('restaurant_id', restaurantId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (staffError) {
-      throw new InternalServerErrorException(staffError.message);
-    }
-
-    if (!staff || staff.role !== 'CASHIER_PLUS') {
-      throw new ForbiddenException(
-        'Only restaurant owner or CASHIER_PLUS can manage menu categories',
-      );
-    }
+    return this.toProductDto(data);
   }
 
   private toMenuDto(menu: Menu): MenuDto {
@@ -231,6 +223,17 @@ export class MenuService {
       id: category.id,
       menu_id: category.menu_id,
       name: category.name,
+    };
+  }
+
+  private toProductDto(product: Product): ProductDto {
+    return {
+      id: product.id,
+      category_id: product.category_id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
     };
   }
 }

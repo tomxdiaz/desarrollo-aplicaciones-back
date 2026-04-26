@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tables, Enums } from '../supabase/database.types';
 import { CreateTableDto } from './dto/create-table.dto';
 import { TableDto } from './dto/table.dto';
@@ -17,8 +16,6 @@ export class TableService {
 
   async findAllByRestaurant(restaurantId: number): Promise<TableDto[]> {
     const supabase = this.supabaseService.getClient();
-
-    await this.assertRestaurantExists(supabase, restaurantId);
 
     const { data, error } = await supabase
       .from('restaurant_table')
@@ -38,8 +35,6 @@ export class TableService {
     createTableDto: CreateTableDto,
   ): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
-
-    await this.assertRestaurantExists(supabase, restaurantId);
 
     const { data, error } = await supabase
       .from('restaurant_table')
@@ -61,8 +56,6 @@ export class TableService {
 
   async delete(restaurantId: number, tableId: number): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
-
-    await this.assertRestaurantExists(supabase, restaurantId);
 
     const { data: existing, error: findError } = await supabase
       .from('restaurant_table')
@@ -100,8 +93,6 @@ export class TableService {
   ): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    await this.assertRestaurantExists(supabase, restaurantId);
-
     const { data, error } = await supabase
       .from('restaurant_table')
       .update({ status })
@@ -121,27 +112,6 @@ export class TableService {
     }
 
     return this.toTableDto(data);
-  }
-
-  private async assertRestaurantExists(
-    supabase: SupabaseClient,
-    restaurantId: number,
-  ): Promise<void> {
-    const { data, error } = await supabase
-      .from('restaurant')
-      .select('id')
-      .eq('id', restaurantId)
-      .maybeSingle();
-
-    if (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-
-    if (!data) {
-      throw new NotFoundException(
-        `Restaurant with id ${restaurantId} not found`,
-      );
-    }
   }
 
   private toTableDto(table: RestaurantTable): TableDto {
