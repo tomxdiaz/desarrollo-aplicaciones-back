@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -26,10 +27,34 @@ const VALID_TRANSITIONS: Record<
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(userId: string, dto: CreateOrderDto): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
+
+    if (!dto.table_id) {
+      throw new BadRequestException('La mesa es requerida');
+    }
+
+    if (!dto.items?.length) {
+      throw new BadRequestException(
+        'El pedido debe tener al menos un producto',
+      );
+    }
+
+    for (const item of dto.items) {
+      if (!item.product_id) {
+        throw new BadRequestException('Cada item debe tener un producto');
+      }
+
+      if (!item.quantity || item.quantity <= 0) {
+        throw new BadRequestException(
+          'La cantidad de cada producto debe ser mayor a cero',
+        );
+      }
+    }
 
     const { data: table, error: tableError } = await supabase
       .from('restaurant_table')
@@ -37,24 +62,51 @@ export class OrderService {
       .eq('id', dto.table_id)
       .maybeSingle();
 
-    if (tableError) throw new InternalServerErrorException(tableError.message);
-    if (!table)
-      throw new NotFoundException(`Table with id ${dto.table_id} not found`);
+    if (tableError) {
+      this.logger.error(
+        `Error finding restaurant_table ${dto.table_id}: ${tableError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(tableError)) {
+        throw new BadRequestException('Datos inválidos para crear el pedido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener la mesa',
+      );
+    }
+
+    if (!table) {
+      throw new NotFoundException('Mesa no encontrada');
+    }
 
     const productIds = dto.items.map((i) => i.product_id);
+
     const { data: products, error: productsError } = await supabase
       .from('product')
       .select('id, price')
       .in('id', productIds);
 
-    if (productsError)
-      throw new InternalServerErrorException(productsError.message);
+    if (productsError) {
+      this.logger.error(
+        `Error finding products for order: ${productsError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(productsError)) {
+        throw new BadRequestException('Datos inválidos para crear el pedido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los productos',
+      );
+    }
 
     const productMap = new Map((products ?? []).map((p) => [p.id, p.price]));
+
     for (const item of dto.items) {
       if (!productMap.has(item.product_id)) {
-        throw new BadRequestException(
-          `Product with id ${item.product_id} not found`,
+        throw new NotFoundException(
+          `Producto con id ${item.product_id} no encontrado`,
         );
       }
     }
@@ -64,7 +116,15 @@ export class OrderService {
       .select('*', { count: 'exact', head: true })
       .eq('restaurant_id', table.restaurant_id);
 
-    if (countError) throw new InternalServerErrorException(countError.message);
+    if (countError) {
+      this.logger.error(
+        `Error counting orders for restaurant_id ${table.restaurant_id}: ${countError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al calcular el número del pedido',
+      );
+    }
 
     const total = dto.items.reduce(
       (sum, item) => sum + productMap.get(item.product_id)! * item.quantity,
@@ -84,7 +144,23 @@ export class OrderService {
       .select()
       .single();
 
-    if (orderError) throw new InternalServerErrorException(orderError.message);
+    if (orderError) {
+      this.logger.error(`Error creating order: ${orderError.message}`);
+
+      if (this.isForeignKeyViolation(orderError)) {
+        throw new NotFoundException(
+          'Restaurante, mesa, producto o usuario relacionado no encontrado',
+        );
+      }
+
+      if (this.isBadRequestDatabaseError(orderError)) {
+        throw new BadRequestException('Datos inválidos para crear el pedido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear el pedido',
+      );
+    }
 
     const itemsToInsert = dto.items.map((item) => ({
       order_id: order.id,
@@ -98,7 +174,25 @@ export class OrderService {
       .insert(itemsToInsert)
       .select();
 
-    if (itemsError) throw new InternalServerErrorException(itemsError.message);
+    if (itemsError) {
+      this.logger.error(
+        `Error creating order items for order_id ${order.id}: ${itemsError.message}`,
+      );
+
+      if (this.isForeignKeyViolation(itemsError)) {
+        throw new NotFoundException(
+          'Pedido o producto relacionado no encontrado',
+        );
+      }
+
+      if (this.isBadRequestDatabaseError(itemsError)) {
+        throw new BadRequestException('Datos inválidos para crear el pedido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear los items del pedido',
+      );
+    }
 
     return this.toOrderDto(order, items ?? []);
   }
@@ -112,7 +206,15 @@ export class OrderService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw new InternalServerErrorException(error.message);
+    if (error) {
+      this.logger.error(
+        `Error finding orders for user_id ${userId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los pedidos',
+      );
+    }
 
     return (orders ?? []).map((o) => this.toOrderDto(o, o.order_item ?? []));
   }
@@ -126,7 +228,19 @@ export class OrderService {
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false });
 
-    if (error) throw new InternalServerErrorException(error.message);
+    if (error) {
+      this.logger.error(
+        `Error finding orders for restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los pedidos del restaurante',
+      );
+    }
 
     return (orders ?? []).map((o) => this.toOrderDto(o, o.order_item ?? []));
   }
@@ -138,22 +252,45 @@ export class OrderService {
   ): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
 
+    if (!newStatus) {
+      throw new BadRequestException('El estado del pedido es requerido');
+    }
+
+    if (!Object.values(RestaurantOrderStatus).includes(newStatus)) {
+      throw new BadRequestException('Estado de pedido inválido');
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('restaurant_order')
       .select('*')
       .eq('id', orderId)
       .maybeSingle();
 
-    if (orderError) throw new InternalServerErrorException(orderError.message);
+    if (orderError) {
+      this.logger.error(
+        `Error finding order_id ${orderId}: ${orderError.message}`,
+      );
 
-    if (!order)
-      throw new NotFoundException(`Order with id ${orderId} not found`);
+      if (this.isBadRequestDatabaseError(orderError)) {
+        throw new BadRequestException('orderId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el pedido',
+      );
+    }
+
+    if (!order) {
+      throw new NotFoundException('Pedido no encontrado');
+    }
 
     const validNext = VALID_TRANSITIONS[order.status];
+
     if (!validNext.includes(newStatus)) {
       const options = validNext.length ? validNext.join(', ') : 'none';
+
       throw new BadRequestException(
-        `Cannot transition from ${order.status} to ${newStatus}. Valid next statuses: ${options}`,
+        `No se puede cambiar el estado de ${order.status} a ${newStatus}. Estados válidos siguientes: ${options}`,
       );
     }
 
@@ -162,17 +299,40 @@ export class OrderService {
       .update({ status: newStatus })
       .eq('id', orderId)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (updateError)
-      throw new InternalServerErrorException(updateError.message);
+    if (updateError) {
+      this.logger.error(
+        `Error updating status for order_id ${orderId}: ${updateError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(updateError)) {
+        throw new BadRequestException('Estado de pedido inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el estado del pedido',
+      );
+    }
+
+    if (!updated) {
+      throw new NotFoundException('Pedido no encontrado');
+    }
 
     const { data: items, error: itemsError } = await supabase
       .from('order_item')
       .select('*')
       .eq('order_id', orderId);
 
-    if (itemsError) throw new InternalServerErrorException(itemsError.message);
+    if (itemsError) {
+      this.logger.error(
+        `Error finding order items for order_id ${orderId}: ${itemsError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los items del pedido',
+      );
+    }
 
     return this.toOrderDto(updated, items ?? []);
   }
@@ -195,5 +355,24 @@ export class OrderService {
         subtotal: i.subtotal,
       })),
     };
+  }
+
+  private isForeignKeyViolation(error: { code?: string }): boolean {
+    return error.code === '23503';
+  }
+
+  private isBadRequestDatabaseError(error: {
+    code?: string;
+    message?: string;
+  }): boolean {
+    const message = error.message?.toLowerCase() ?? '';
+
+    return (
+      error.code === '22P02' || // invalid_text_representation
+      error.code === '23502' || // not_null_violation
+      error.code === '23505' || // unique_violation
+      error.code === '23514' || // check_violation
+      message.includes('invalid input syntax')
+    );
   }
 }

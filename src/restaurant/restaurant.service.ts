@@ -3,6 +3,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import type { Tables } from '../supabase/database.types';
@@ -14,6 +15,8 @@ type Restaurant = Tables<'restaurant'>;
 
 @Injectable()
 export class RestaurantService {
+  private readonly logger = new Logger(RestaurantService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findAll(): Promise<RestaurantDto[]> {
@@ -25,7 +28,11 @@ export class RestaurantService {
       .order('id', { ascending: true });
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error finding all restaurants: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los restaurantes',
+      );
     }
 
     return (data ?? []).map((restaurant) => this.toRestaurantDto(restaurant));
@@ -37,6 +44,10 @@ export class RestaurantService {
   ): Promise<RestaurantDto> {
     const supabase = this.supabaseService.getAdminClient();
 
+    if (!createRestaurantDto.name) {
+      throw new BadRequestException('El nombre del restaurante es requerido');
+    }
+
     const { data: owner, error: ownerError } = await supabase
       .from('app_user')
       .select('id')
@@ -44,12 +55,24 @@ export class RestaurantService {
       .maybeSingle();
 
     if (ownerError) {
-      throw new InternalServerErrorException(ownerError.message);
+      this.logger.error(
+        `Error finding owner_id ${ownerId}: ${ownerError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(ownerError)) {
+        throw new BadRequestException(
+          'Datos inválidos para crear el restaurante',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al validar el dueño del restaurante',
+      );
     }
 
     if (!owner) {
       throw new BadRequestException(
-        `owner_id '${ownerId}' does not exist in app_user`,
+        'El usuario dueño del restaurante no existe',
       );
     }
 
@@ -65,23 +88,28 @@ export class RestaurantService {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error creating restaurant: ${error.message}`);
+
+      if (this.isForeignKeyViolation(error)) {
+        throw new BadRequestException(
+          'El usuario dueño del restaurante no existe',
+        );
+      }
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para crear el restaurante',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear el restaurante',
+      );
     }
 
     return this.toRestaurantDto(data);
   }
 
-  private toRestaurantDto(restaurant: Restaurant): RestaurantDto {
-    return {
-      id: restaurant.id,
-      name: restaurant.name,
-      owner_id: restaurant.owner_id,
-      description: restaurant.description,
-      address: restaurant.address,
-    };
-  }
-
-  // Get a restaurant by id, including its tables
   async findOne(id: number): Promise<RestaurantDto> {
     const supabase = this.supabaseService.getClient();
 
@@ -92,11 +120,19 @@ export class RestaurantService {
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error finding restaurant_id ${id}: ${error.message}`);
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
+      );
     }
 
     if (!data) {
-      throw new NotFoundException(`Restaurant with id ${id} not found`);
+      throw new NotFoundException('Restaurante no encontrado');
     }
 
     const tables: TableDto[] = (data.restaurant_table ?? []).map((table) => ({
@@ -133,15 +169,29 @@ export class RestaurantService {
     ]);
 
     if (ownedError) {
-      throw new InternalServerErrorException(ownedError.message);
+      this.logger.error(
+        `Error finding owned restaurants for user_id ${userId}: ${ownedError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los restaurantes del usuario',
+      );
     }
+
     if (staffError) {
-      throw new InternalServerErrorException(staffError.message);
+      this.logger.error(
+        `Error finding staff restaurants for user_id ${userId}: ${staffError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los restaurantes del usuario',
+      );
     }
 
     const staffIds = (staffRows ?? []).map((row) => row.restaurant_id);
 
     let staffRestaurants: Restaurant[] = [];
+
     if (staffIds.length > 0) {
       const { data, error } = await supabase
         .from('restaurant')
@@ -149,13 +199,49 @@ export class RestaurantService {
         .in('id', staffIds);
 
       if (error) {
-        throw new InternalServerErrorException(error.message);
+        this.logger.error(
+          `Error finding restaurants by staff ids for user_id ${userId}: ${error.message}`,
+        );
+
+        throw new InternalServerErrorException(
+          'Error inesperado al obtener los restaurantes del usuario',
+        );
       }
+
       staffRestaurants = data ?? [];
     }
 
     return [...(owned ?? []), ...staffRestaurants]
       .sort((a, b) => a.id - b.id)
       .map((r) => this.toRestaurantDto(r));
+  }
+
+  private toRestaurantDto(restaurant: Restaurant): RestaurantDto {
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      owner_id: restaurant.owner_id,
+      description: restaurant.description,
+      address: restaurant.address,
+    };
+  }
+
+  private isForeignKeyViolation(error: { code?: string }): boolean {
+    return error.code === '23503';
+  }
+
+  private isBadRequestDatabaseError(error: {
+    code?: string;
+    message?: string;
+  }): boolean {
+    const message = error.message?.toLowerCase() ?? '';
+
+    return (
+      error.code === '22P02' || // invalid_text_representation
+      error.code === '23502' || // not_null_violation
+      error.code === '23505' || // unique_violation
+      error.code === '23514' || // check_violation
+      message.includes('invalid input syntax')
+    );
   }
 }
