@@ -6,7 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
@@ -27,6 +27,7 @@ export class RestaurantController {
 
   // Get all restaurants
   @Get()
+  @ApiOperation({ summary: 'Obtener todos los restaurantes' })
   async findAll(): Promise<RestaurantDto[]> {
     return await this.restaurantService.findAll();
   }
@@ -34,6 +35,7 @@ export class RestaurantController {
   // Get my restaurants (must be declared before :id so "me" is not parsed as id)
   @Get('me')
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener mis restaurantes' })
   @UseGuards(SupabaseAuthGuard)
   async findMyRestaurants(
     @CurrentAppUser appUser: AppUser,
@@ -43,6 +45,7 @@ export class RestaurantController {
 
   // Get a restaurant by id
   @Get(':restaurantId')
+  @ApiOperation({ summary: 'Obtener un restaurante por ID' })
   async findOne(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<RestaurantDto> {
@@ -51,6 +54,7 @@ export class RestaurantController {
 
   // Create a new restaurant
   @Post()
+  @ApiOperation({ summary: 'Crear un nuevo restaurante' })
   @ApiBearerAuth()
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)

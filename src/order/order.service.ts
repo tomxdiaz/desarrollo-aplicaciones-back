@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -10,14 +9,15 @@ import type { Tables } from '../supabase/database.types';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderDto } from './dto/order.dto';
 import { RestaurantOrderStatus } from '../utils/enums/restaurant-order-status';
-import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
-import { AppRole } from '../utils/enums/roles';
 
 type RestaurantOrder = Tables<'restaurant_order'>;
 type OrderItem = Tables<'order_item'>;
 type AppUser = Tables<'app_user'>;
 
-const VALID_TRANSITIONS: Record<RestaurantOrderStatus, RestaurantOrderStatus[]> = {
+const VALID_TRANSITIONS: Record<
+  RestaurantOrderStatus,
+  RestaurantOrderStatus[]
+> = {
   PENDING: ['IN_PROCESS', 'CANCELLED'],
   IN_PROCESS: ['DELIVERED'],
   DELIVERED: [],
@@ -38,7 +38,8 @@ export class OrderService {
       .maybeSingle();
 
     if (tableError) throw new InternalServerErrorException(tableError.message);
-    if (!table) throw new NotFoundException(`Table with id ${dto.table_id} not found`);
+    if (!table)
+      throw new NotFoundException(`Table with id ${dto.table_id} not found`);
 
     const productIds = dto.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabase
@@ -46,12 +47,15 @@ export class OrderService {
       .select('id, price')
       .in('id', productIds);
 
-    if (productsError) throw new InternalServerErrorException(productsError.message);
+    if (productsError)
+      throw new InternalServerErrorException(productsError.message);
 
     const productMap = new Map((products ?? []).map((p) => [p.id, p.price]));
     for (const item of dto.items) {
       if (!productMap.has(item.product_id)) {
-        throw new BadRequestException(`Product with id ${item.product_id} not found`);
+        throw new BadRequestException(
+          `Product with id ${item.product_id} not found`,
+        );
       }
     }
 
@@ -141,11 +145,9 @@ export class OrderService {
       .maybeSingle();
 
     if (orderError) throw new InternalServerErrorException(orderError.message);
-    if (!order) throw new NotFoundException(`Order with id ${orderId} not found`);
 
-    if (appUser.global_role !== AppRole.SUPER_USER) {
-      await this.assertCanManageOrder(order.restaurant_id, appUser.id);
-    }
+    if (!order)
+      throw new NotFoundException(`Order with id ${orderId} not found`);
 
     const validNext = VALID_TRANSITIONS[order.status];
     if (!validNext.includes(newStatus)) {
@@ -162,7 +164,8 @@ export class OrderService {
       .select()
       .single();
 
-    if (updateError) throw new InternalServerErrorException(updateError.message);
+    if (updateError)
+      throw new InternalServerErrorException(updateError.message);
 
     const { data: items, error: itemsError } = await supabase
       .from('order_item')
@@ -172,41 +175,6 @@ export class OrderService {
     if (itemsError) throw new InternalServerErrorException(itemsError.message);
 
     return this.toOrderDto(updated, items ?? []);
-  }
-
-  private async assertCanManageOrder(restaurantId: number, userId: string): Promise<void> {
-    const supabase = this.supabaseService.getAdminClient();
-
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurant')
-      .select('owner_id')
-      .eq('id', restaurantId)
-      .single();
-
-    if (restaurantError || !restaurant) {
-      throw new InternalServerErrorException('Could not verify restaurant');
-    }
-
-    if (restaurant.owner_id === userId) return;
-
-    const { data: staff, error: staffError } = await supabase
-      .from('restaurant_staff')
-      .select('role')
-      .eq('restaurant_id', restaurantId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (staffError) throw new InternalServerErrorException(staffError.message);
-
-    const allowedRoles: RestaurantStaffRole[] = [
-      RestaurantStaffRole.ADMIN,
-      RestaurantStaffRole.CASHIER_PLUS,
-      RestaurantStaffRole.CASHIER,
-    ];
-
-    if (!staff || !allowedRoles.includes(staff.role)) {
-      throw new ForbiddenException('You are not allowed to manage this order');
-    }
   }
 
   private toOrderDto(order: RestaurantOrder, items: OrderItem[]): OrderDto {

@@ -21,6 +21,8 @@ import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { RestaurantStaffService } from './restaurant_staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { AppUserService } from '../app_user/app_user.service';
+import { StaffDto } from './dto/staff.dto';
+import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 
 @ApiTags('restaurant_staff')
 @Controller('restaurant/:restaurantId/staff')
@@ -32,9 +34,9 @@ export class RestaurantStaffController {
 
   @Get()
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener el personal de un restaurante' })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN')
-  @ApiOperation({ summary: 'Get staff for a restaurant' })
+  @RestaurantRoles(RestaurantStaffRole.ADMIN)
   @ApiResponse({
     status: 200,
     description: 'List of staff members',
@@ -52,25 +54,30 @@ export class RestaurantStaffController {
     status: 400,
     description: 'Restaurant not found or user is not staff of this restaurant',
   })
-  async getStaff(@Param('restaurantId', ParseIntPipe) restaurantId: number) {
+  async getStaff(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+  ): Promise<StaffDto[]> {
     return await this.staffService.getStaff(restaurantId);
   }
 
   @Post()
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Agregar personal a un restaurante' })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN')
-  @ApiOperation({ summary: 'Add staff to a restaurant' })
+  @RestaurantRoles(RestaurantStaffRole.ADMIN)
   @ApiBody({
     type: CreateStaffDto,
     examples: {
       admin: {
         summary: 'Add admin staff',
-        value: { email: 'staff1@example.com', role: 'ADMIN' },
+        value: { email: 'staff1@example.com', role: RestaurantStaffRole.ADMIN },
       },
       cashier: {
         summary: 'Add cashier staff',
-        value: { email: 'staff2@example.com', role: 'CASHIER' },
+        value: {
+          email: 'staff2@example.com',
+          role: RestaurantStaffRole.CASHIER,
+        },
       },
     },
   })
@@ -97,8 +104,9 @@ export class RestaurantStaffController {
 
   @Delete(':userId')
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar personal de un restaurante' })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN)
   async removeStaff(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('userId') userId: string,

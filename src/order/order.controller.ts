@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -29,6 +29,9 @@ export class OrderController {
 
   @Post()
   @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Crear un nuevo pedido',
+  })
   @UseGuards(SupabaseAuthGuard)
   async create(
     @CurrentAppUser appUser: AppUser,
@@ -39,6 +42,9 @@ export class OrderController {
 
   @Get('mine')
   @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Obtener mis pedidos',
+  })
   @UseGuards(SupabaseAuthGuard)
   async findMine(@CurrentAppUser appUser: AppUser): Promise<OrderDto[]> {
     return await this.orderService.findMine(appUser.id);
@@ -46,6 +52,9 @@ export class OrderController {
 
   @Get('restaurant/:restaurantId')
   @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Obtener los pedidos de un restaurante',
+  })
   @RestaurantRoles(
     RestaurantStaffRole.ADMIN,
     RestaurantStaffRole.CASHIER_PLUS,
@@ -60,6 +69,14 @@ export class OrderController {
 
   @Patch(':orderId/status')
   @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Actualizar el estado de un pedido',
+  })
+  @RestaurantRoles(
+    RestaurantStaffRole.ADMIN,
+    RestaurantStaffRole.CASHIER_PLUS,
+    RestaurantStaffRole.CASHIER,
+  )
   @UseGuards(SupabaseAuthGuard)
   async updateStatus(
     @Param('orderId', ParseIntPipe) orderId: number,

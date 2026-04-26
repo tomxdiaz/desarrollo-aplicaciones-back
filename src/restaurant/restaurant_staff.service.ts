@@ -1,15 +1,16 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { StaffDto } from './dto/staff.dto';
 
 @Injectable()
 export class RestaurantStaffService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getStaff(restaurantId: number) {
+  async getStaff(restaurantId: number): Promise<StaffDto[]> {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from('restaurant_staff')
-      .select('user_id, role, app_user (email)')
+      .select('*')
       .eq('restaurant_id', restaurantId);
     if (error) throw new ForbiddenException(error.message);
     return data;
