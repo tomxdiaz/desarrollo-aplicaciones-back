@@ -80,7 +80,7 @@ export class TableController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles(RestaurantStaffRole.ADMIN)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async create(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() createTableDto: CreateTableDto,
@@ -111,7 +111,7 @@ export class TableController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles(RestaurantStaffRole.ADMIN)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async delete(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('tableId', ParseIntPipe) tableId: number,
