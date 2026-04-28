@@ -84,7 +84,19 @@ export class OrderService {
 
     const { data: products, error: productsError } = await supabase
       .from('product')
-      .select('id, price')
+      .select(
+        `
+        id,
+        price,
+        category!inner(
+          id,
+          menu!inner(
+            id,
+            restaurant_id
+          )
+        )
+      `,
+      )
       .in('id', productIds);
 
     if (productsError) {
@@ -104,9 +116,23 @@ export class OrderService {
     const productMap = new Map((products ?? []).map((p) => [p.id, p.price]));
 
     for (const item of dto.items) {
-      if (!productMap.has(item.product_id)) {
+      const product = products?.find((p) => p.id === item.product_id);
+
+      if (!product) {
         throw new NotFoundException(
           `Producto con id ${item.product_id} no encontrado`,
+        );
+      }
+
+      const productCategory = product.category as unknown as {
+        menu: {
+          restaurant_id: number;
+        };
+      };
+
+      if (productCategory.menu.restaurant_id !== table.restaurant_id) {
+        throw new BadRequestException(
+          `El producto con id ${item.product_id} no pertenece al restaurante de la mesa`,
         );
       }
     }
