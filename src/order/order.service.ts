@@ -222,6 +222,8 @@ export class OrderService {
   async findByRestaurant(restaurantId: number): Promise<OrderDto[]> {
     const supabase = this.supabaseService.getAdminClient();
 
+    await this.ensureRestaurantExists(restaurantId);
+
     const { data: orders, error } = await supabase
       .from('restaurant_order')
       .select('*, order_item(*)')
@@ -335,6 +337,34 @@ export class OrderService {
     }
 
     return this.toOrderDto(updated, items ?? []);
+  }
+
+  private async ensureRestaurantExists(restaurantId: number): Promise<void> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('restaurant')
+      .select('id')
+      .eq('id', restaurantId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error finding restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Restaurante no encontrado');
+    }
   }
 
   private toOrderDto(order: RestaurantOrder, items: OrderItem[]): OrderDto {

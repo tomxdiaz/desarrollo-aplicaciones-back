@@ -64,29 +64,9 @@ export class MenuService {
   }
 
   async findMenuByRestaurantId(restaurantId: number): Promise<MenuDto> {
-    const supabase = this.supabaseService.getAdminClient();
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
 
-    const { data, error } = await supabase
-      .from('menu')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(
-        `Error finding menu for restaurant_id ${restaurantId}: ${error.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener el menú',
-      );
-    }
-
-    if (!data) {
-      throw new NotFoundException('Restaurante o menú no encontrado');
-    }
-
-    return this.toMenuDto(data);
+    return this.toMenuDto(menu);
   }
 
   async findCategoriesByRestaurantId(
@@ -384,6 +364,8 @@ export class MenuService {
   private async getMenuByRestaurantIdOrThrow(
     restaurantId: number,
   ): Promise<Menu> {
+    await this.ensureRestaurantExists(restaurantId);
+
     const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
@@ -403,10 +385,38 @@ export class MenuService {
     }
 
     if (!data) {
-      throw new NotFoundException('Restaurante o menú no encontrado');
+      throw new NotFoundException('Menú no encontrado');
     }
 
     return data;
+  }
+
+  private async ensureRestaurantExists(restaurantId: number): Promise<void> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('restaurant')
+      .select('id')
+      .eq('id', restaurantId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error finding restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Restaurante no encontrado');
+    }
   }
 
   private toMenuDto(menu: Menu): MenuDto {

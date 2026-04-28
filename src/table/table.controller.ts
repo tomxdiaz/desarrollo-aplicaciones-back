@@ -142,7 +142,11 @@ export class TableController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
+  @RestaurantRoles(
+    RestaurantStaffRole.ADMIN,
+    RestaurantStaffRole.CASHIER_PLUS,
+    RestaurantStaffRole.CASHIER,
+  )
   async updateStatus(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('tableId', ParseIntPipe) tableId: number,
