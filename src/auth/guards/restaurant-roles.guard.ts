@@ -36,7 +36,7 @@ export class RestaurantRolesGuard implements CanActivate {
       : parseInt(idParam, 10);
 
     if (!appUser || !restaurantId) {
-      throw new ForbiddenException('Missing user or restaurant id');
+      throw new ForbiddenException('Falta el usuario o el ID del restaurante');
     }
 
     const allowedRoles =
@@ -62,7 +62,7 @@ export class RestaurantRolesGuard implements CanActivate {
       throw new NotFoundException('Restaurante no encontrado');
     }
 
-    // SUPER_USER bypassea solo la validación de rol,
+    // SUPER_USER omite solo la validación de rol,
     // pero NO la existencia del restaurante.
     if (appUser.global_role === AppRole.SUPER_USER) {
       return true;
@@ -74,7 +74,7 @@ export class RestaurantRolesGuard implements CanActivate {
 
     if (allowedRoles.length === 0) {
       throw new ForbiddenException(
-        'You are not allowed to manage this restaurant',
+        'No tenés permisos para gestionar este restaurante',
       );
     }
 
@@ -97,7 +97,7 @@ export class RestaurantRolesGuard implements CanActivate {
     }
 
     throw new ForbiddenException(
-      'You are not allowed to manage this restaurant',
+      'No tenés permisos para gestionar este restaurante',
     );
   }
 }

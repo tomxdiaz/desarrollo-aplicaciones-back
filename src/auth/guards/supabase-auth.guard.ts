@@ -23,7 +23,7 @@ export class SupabaseAuthGuard implements CanActivate {
     const token = this.extractBearerToken(request.headers.authorization);
 
     if (!token) {
-      throw new UnauthorizedException('Missing bearer token');
+      throw new UnauthorizedException('Falta el token de autenticación');
     }
 
     const supabase = this.supabaseService.getAdminClient();
@@ -32,7 +32,7 @@ export class SupabaseAuthGuard implements CanActivate {
       await supabase.auth.getUser(token);
 
     if (userError || !userData.user) {
-      throw new UnauthorizedException('Invalid or expired token');
+      throw new UnauthorizedException('Token inválido o expirado');
     }
 
     const { data: appUser, error: appUserError } = await supabase
@@ -42,11 +42,13 @@ export class SupabaseAuthGuard implements CanActivate {
       .maybeSingle();
 
     if (appUserError) {
-      throw new UnauthorizedException('Unable to load app_user profile');
+      throw new UnauthorizedException(
+        'No se pudo cargar el perfil del usuario',
+      );
     }
 
     if (!appUser) {
-      throw new UnauthorizedException('app_user profile not found');
+      throw new UnauthorizedException('Perfil de usuario no encontrado');
     }
 
     request.appUser = appUser;
