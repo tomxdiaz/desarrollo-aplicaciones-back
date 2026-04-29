@@ -13,7 +13,6 @@ import { RestaurantOrderStatus } from '../utils/enums/restaurant-order-status';
 
 type RestaurantOrder = Tables<'restaurant_order'>;
 type OrderItem = Tables<'order_item'>;
-type AppUser = Tables<'app_user'>;
 
 const VALID_TRANSITIONS: Record<
   RestaurantOrderStatus,
@@ -274,8 +273,8 @@ export class OrderService {
   }
 
   async updateStatus(
+    restaurantId: number,
     orderId: number,
-    appUser: AppUser,
     newStatus: RestaurantOrderStatus,
   ): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
@@ -292,15 +291,16 @@ export class OrderService {
       .from('restaurant_order')
       .select('*')
       .eq('id', orderId)
+      .eq('restaurant_id', restaurantId)
       .maybeSingle();
 
     if (orderError) {
       this.logger.error(
-        `Error finding order_id ${orderId}: ${orderError.message}`,
+        `Error finding order_id ${orderId} for restaurant_id ${restaurantId}: ${orderError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(orderError)) {
-        throw new BadRequestException('orderId inválido');
+        throw new BadRequestException('orderId o restaurantId inválido');
       }
 
       throw new InternalServerErrorException(
@@ -309,7 +309,7 @@ export class OrderService {
     }
 
     if (!order) {
-      throw new NotFoundException('Pedido no encontrado');
+      throw new NotFoundException('Pedido no encontrado para este restaurante');
     }
 
     const validNext = VALID_TRANSITIONS[order.status];
@@ -326,12 +326,13 @@ export class OrderService {
       .from('restaurant_order')
       .update({ status: newStatus })
       .eq('id', orderId)
+      .eq('restaurant_id', restaurantId)
       .select()
       .maybeSingle();
 
     if (updateError) {
       this.logger.error(
-        `Error updating status for order_id ${orderId}: ${updateError.message}`,
+        `Error updating status for order_id ${orderId} and restaurant_id ${restaurantId}: ${updateError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(updateError)) {
@@ -344,7 +345,7 @@ export class OrderService {
     }
 
     if (!updated) {
-      throw new NotFoundException('Pedido no encontrado');
+      throw new NotFoundException('Pedido no encontrado para este restaurante');
     }
 
     const { data: items, error: itemsError } = await supabase

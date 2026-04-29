@@ -18,7 +18,6 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -26,9 +25,6 @@ import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 import { OrderDto } from './dto/order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderService } from './order.service';
-import { Tables } from '../supabase/database.types';
-
-type AppUser = Tables<'app_user'>;
 
 @ApiTags('restaurant-orders')
 @Controller('restaurants/:restaurantId/orders')
@@ -105,9 +101,12 @@ export class RestaurantOrderController {
   async updateStatus(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('orderId', ParseIntPipe) orderId: number,
-    @CurrentAppUser appUser: AppUser,
     @Body() dto: UpdateOrderStatusDto,
   ): Promise<OrderDto> {
-    return await this.orderService.updateStatus(orderId, appUser, dto.status);
+    return await this.orderService.updateStatus(
+      restaurantId,
+      orderId,
+      dto.status,
+    );
   }
 }

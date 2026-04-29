@@ -167,7 +167,8 @@ export class MenuService {
     const { error: deleteError } = await supabase
       .from('category')
       .delete()
-      .eq('id', categoryId);
+      .eq('id', categoryId)
+      .eq('menu_id', menu.id);
 
     if (deleteError) {
       this.logger.error(
@@ -341,6 +342,7 @@ export class MenuService {
       .from('product')
       .delete()
       .eq('id', productId)
+      .eq('category_id', product.category_id)
       .select('*')
       .maybeSingle();
 

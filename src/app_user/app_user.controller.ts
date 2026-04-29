@@ -53,9 +53,6 @@ export class AppUserController {
   @ApiOperation({
     summary: 'Obtener todos los usuarios (solo para SUPER_USER)',
   })
-  @ApiOperation({
-    summary: 'Obtener todos los usuarios (solo para SUPER_USER)',
-  })
   @ApiOkResponse({
     description: 'Listado de usuarios obtenido correctamente',
     type: AppUserDto,

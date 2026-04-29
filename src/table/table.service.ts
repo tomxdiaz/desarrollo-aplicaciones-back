@@ -111,7 +111,8 @@ export class TableService {
     const { error } = await supabase
       .from('restaurant_table')
       .delete()
-      .eq('id', tableId);
+      .eq('id', tableId)
+      .eq('restaurant_id', restaurantId);
 
     if (error) {
       this.logger.error(`Error deleting table_id ${tableId}: ${error.message}`);
