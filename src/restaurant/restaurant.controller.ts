@@ -5,12 +5,23 @@ import {
   ParseIntPipe,
   Post,
   UseGuards,
+  Param,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
-import { Param } from '@nestjs/common';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { Tables } from '../supabase/database.types';
@@ -25,15 +36,34 @@ type AppUser = Tables<'app_user'>;
 export class RestaurantController {
   constructor(private readonly restaurantService: RestaurantService) {}
 
-  // Get all restaurants
   @Get()
+  @ApiOperation({ summary: 'Obtener todos los restaurantes' })
+  @ApiOkResponse({
+    description: 'Restaurantes obtenidos correctamente',
+    type: RestaurantDto,
+    isArray: true,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   async findAll(): Promise<RestaurantDto[]> {
     return await this.restaurantService.findAll();
   }
 
-  // Get my restaurants (must be declared before :id so "me" is not parsed as id)
   @Get('me')
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener mis restaurantes' })
+  @ApiOkResponse({
+    description: 'Restaurantes del usuario obtenidos correctamente',
+    type: RestaurantDto,
+    isArray: true,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   @UseGuards(SupabaseAuthGuard)
   async findMyRestaurants(
     @CurrentAppUser appUser: AppUser,
@@ -41,17 +71,46 @@ export class RestaurantController {
     return await this.restaurantService.findMyRestaurants(appUser.id);
   }
 
-  // Get a restaurant by id
   @Get(':restaurantId')
+  @ApiOperation({ summary: 'Obtener un restaurante por ID' })
+  @ApiOkResponse({
+    description: 'Restaurante obtenido correctamente',
+    type: RestaurantDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'restaurantId inválido',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   async findOne(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<RestaurantDto> {
     return await this.restaurantService.findOne(restaurantId);
   }
 
-  // Create a new restaurant
   @Post()
+  @ApiOperation({ summary: 'Crear un nuevo restaurante' })
   @ApiBearerAuth()
+  @ApiCreatedResponse({
+    description: 'Restaurante creado correctamente',
+    type: RestaurantDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Datos inválidos para crear el restaurante',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   async create(

@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -10,34 +12,61 @@ import { CategoryDto } from './dto/category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { MenuDto } from './dto/menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
+import { ProductDto } from './dto/product.dto';
+import { CreateProductDto } from './dto/create-product.dto';
 
 type Menu = Tables<'menu'>;
 type Category = Tables<'category'>;
+type Product = Tables<'product'>;
 
 @Injectable()
 export class MenuService {
+  private readonly logger = new Logger(MenuService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async findMenuByRestaurantId(restaurantId: number): Promise<MenuDto> {
+  async updateMenuName(
+    restaurantId: number,
+    updateMenuDto: UpdateMenuDto,
+  ): Promise<MenuDto> {
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
     const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('menu')
+      .update({ name: updateMenuDto.name })
+      .eq('id', menu.id)
       .select('*')
-      .eq('restaurant_id', restaurantId)
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
-    }
+      this.logger.error(
+        `Error updating menu name for menu_id ${menu.id}: ${error.message}`,
+      );
 
-    if (!data) {
-      throw new NotFoundException(
-        `menu for restaurant_id '${restaurantId}' was not found`,
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para actualizar el menú',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el menú',
       );
     }
 
+    if (!data) {
+      throw new NotFoundException('Restaurante o menú no encontrado');
+    }
+
     return this.toMenuDto(data);
+  }
+
+  async findMenuByRestaurantId(restaurantId: number): Promise<MenuDto> {
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    return this.toMenuDto(menu);
   }
 
   async findCategoriesByRestaurantId(
@@ -53,7 +82,13 @@ export class MenuService {
       .order('id', { ascending: true });
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error finding categories for menu_id ${menu.id}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener las categorías',
+      );
     }
 
     return (data ?? []).map((category) => this.toCategoryDto(category));
@@ -62,12 +97,11 @@ export class MenuService {
   async createCategory(
     restaurantId: number,
     createCategoryDto: CreateCategoryDto,
-    userId: string,
   ): Promise<CategoryDto> {
     const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-    await this.assertCanManageCategories(restaurantId, userId);
 
     const supabase = this.supabaseService.getAdminClient();
+
     const { data, error } = await supabase
       .from('category')
       .insert({
@@ -78,44 +112,32 @@ export class MenuService {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error creating category for menu_id ${menu.id}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para crear la categoría',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear la categoría',
+      );
     }
 
     return this.toCategoryDto(data);
   }
 
-  async updateMenuName(
-    restaurantId: number,
-    updateMenuDto: UpdateMenuDto,
-  ): Promise<MenuDto> {
-    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-
-    const supabase = this.supabaseService.getAdminClient();
-    const { data, error } = await supabase
-      .from('menu')
-      .update({ name: updateMenuDto.name })
-      .eq('id', menu.id)
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-
-    return this.toMenuDto(data);
-  }
-
   async deleteCategory(
     restaurantId: number,
     categoryId: number,
-    userId: string,
   ): Promise<void> {
     const supabase = this.supabaseService.getAdminClient();
 
-    // Get menu for restaurantId
     const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
 
-    // Check category exists and belongs to this menu
     const { data: category, error: categoryError } = await supabase
       .from('category')
       .select('id, menu_id')
@@ -123,36 +145,229 @@ export class MenuService {
       .maybeSingle();
 
     if (categoryError) {
-      throw new InternalServerErrorException(categoryError.message);
+      this.logger.error(
+        `Error finding category_id ${categoryId}: ${categoryError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener la categoría',
+      );
     }
 
     if (!category) {
-      throw new NotFoundException(`category_id '${categoryId}' was not found`);
+      throw new NotFoundException('Categoría no encontrada');
     }
 
     if (category.menu_id !== menu.id) {
       throw new ForbiddenException(
-        'Category does not belong to this restaurant',
+        'La categoría no pertenece a este restaurante',
       );
     }
 
-    // Permission check
-    await this.assertCanManageCategories(restaurantId, userId);
-
-    // Delete
     const { error: deleteError } = await supabase
       .from('category')
       .delete()
-      .eq('id', categoryId);
+      .eq('id', categoryId)
+      .eq('menu_id', menu.id);
 
     if (deleteError) {
-      throw new InternalServerErrorException(deleteError.message);
+      this.logger.error(
+        `Error deleting category_id ${categoryId}: ${deleteError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al eliminar la categoría',
+      );
     }
+  }
+
+  async findProductsByRestaurantId(
+    restaurantId: number,
+  ): Promise<ProductDto[]> {
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data: categories, error: categoriesError } = await supabase
+      .from('category')
+      .select('id')
+      .eq('menu_id', menu.id);
+
+    if (categoriesError) {
+      this.logger.error(
+        `Error finding categories for menu_id ${menu.id}: ${categoriesError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener las categorías',
+      );
+    }
+
+    const categoryIds = (categories ?? []).map((category) => category.id);
+
+    if (categoryIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .select('*')
+      .in('category_id', categoryIds)
+      .order('id', { ascending: true });
+
+    if (error) {
+      this.logger.error(
+        `Error finding products for menu_id ${menu.id}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los productos',
+      );
+    }
+
+    return (data ?? []).map((product) => this.toProductDto(product));
+  }
+
+  async createProduct(
+    restaurantId: number,
+    createProductDto: CreateProductDto,
+  ): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    const { data: category, error: categoryError } = await supabase
+      .from('category')
+      .select('id, menu_id')
+      .eq('id', createProductDto.category_id)
+      .maybeSingle();
+
+    if (categoryError) {
+      this.logger.error(
+        `Error finding category_id ${createProductDto.category_id}: ${categoryError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(categoryError)) {
+        throw new BadRequestException('Datos inválidos para crear el producto');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener la categoría',
+      );
+    }
+
+    if (!category) {
+      throw new NotFoundException('Categoría no encontrada');
+    }
+
+    if (category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'La categoría no pertenece a este restaurante',
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .insert({
+        category_id: createProductDto.category_id,
+        name: createProductDto.name,
+        description: createProductDto.description,
+        price: createProductDto.price,
+        image: createProductDto.image,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      this.logger.error(`Error creating product: ${error.message}`);
+
+      if (this.isForeignKeyViolation(error)) {
+        throw new NotFoundException('Categoría no encontrada');
+      }
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('Datos inválidos para crear el producto');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear el producto',
+      );
+    }
+
+    return this.toProductDto(data);
+  }
+
+  async deleteProduct(
+    restaurantId: number,
+    productId: number,
+  ): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    const { data: product, error: productError } = await supabase
+      .from('product')
+      .select('*, category!inner(id, menu_id)')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (productError) {
+      this.logger.error(
+        `Error finding product_id ${productId}: ${productError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(productError)) {
+        throw new BadRequestException('productId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el producto',
+      );
+    }
+
+    if (!product) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    if (product.category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'El producto no pertenece a este restaurante',
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .delete()
+      .eq('id', productId)
+      .eq('category_id', product.category_id)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error deleting product_id ${productId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al eliminar el producto',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    return this.toProductDto(data);
   }
 
   private async getMenuByRestaurantIdOrThrow(
     restaurantId: number,
   ): Promise<Menu> {
+    await this.ensureRestaurantExists(restaurantId);
+
     const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
@@ -162,59 +377,47 @@ export class MenuService {
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error finding menu for restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el menú',
+      );
     }
 
     if (!data) {
-      throw new NotFoundException(
-        `menu for restaurant_id '${restaurantId}' was not found`,
-      );
+      throw new NotFoundException('Menú no encontrado');
     }
 
     return data;
   }
 
-  private async assertCanManageCategories(
-    restaurantId: number,
-    userId: string,
-  ): Promise<void> {
+  private async ensureRestaurantExists(restaurantId: number): Promise<void> {
     const supabase = this.supabaseService.getAdminClient();
 
-    const { data: restaurant, error: restaurantError } = await supabase
+    const { data, error } = await supabase
       .from('restaurant')
-      .select('owner_id')
+      .select('id')
       .eq('id', restaurantId)
       .maybeSingle();
 
-    if (restaurantError) {
-      throw new InternalServerErrorException(restaurantError.message);
-    }
+    if (error) {
+      this.logger.error(
+        `Error finding restaurant_id ${restaurantId}: ${error.message}`,
+      );
 
-    if (!restaurant) {
-      throw new NotFoundException(
-        `restaurant_id '${restaurantId}' was not found`,
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
       );
     }
 
-    if (restaurant.owner_id === userId) {
-      return;
-    }
-
-    const { data: staff, error: staffError } = await supabase
-      .from('restaurant_staff')
-      .select('role')
-      .eq('restaurant_id', restaurantId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (staffError) {
-      throw new InternalServerErrorException(staffError.message);
-    }
-
-    if (!staff || staff.role !== 'CASHIER_PLUS') {
-      throw new ForbiddenException(
-        'Only restaurant owner or CASHIER_PLUS can manage menu categories',
-      );
+    if (!data) {
+      throw new NotFoundException('Restaurante no encontrado');
     }
   }
 
@@ -232,5 +435,35 @@ export class MenuService {
       menu_id: category.menu_id,
       name: category.name,
     };
+  }
+
+  private toProductDto(product: Product): ProductDto {
+    return {
+      id: product.id,
+      category_id: product.category_id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
+    };
+  }
+
+  private isForeignKeyViolation(error: { code?: string }): boolean {
+    return error.code === '23503';
+  }
+
+  private isBadRequestDatabaseError(error: {
+    code?: string;
+    message?: string;
+  }): boolean {
+    const message = error.message?.toLowerCase() ?? '';
+
+    return (
+      error.code === '22P02' || // invalid_text_representation
+      error.code === '23502' || // not_null_violation
+      error.code === '23505' || // unique_violation
+      error.code === '23514' || // check_violation
+      message.includes('invalid input syntax')
+    );
   }
 }

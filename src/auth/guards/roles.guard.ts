@@ -34,12 +34,12 @@ export class RolesGuard implements CanActivate {
     const currentRole = request.appUser?.global_role;
 
     if (!currentRole) {
-      throw new ForbiddenException('Authenticated app_user is missing');
+      throw new ForbiddenException('Falta el usuario autenticado');
     }
 
     if (!requiredRoles.includes(currentRole)) {
       throw new ForbiddenException(
-        'You do not have permission to access this resource',
+        'No tenés permisos para acceder a este recurso',
       );
     }
 
