@@ -13,4 +13,10 @@ export class CategoryDto {
   @ApiProperty({ example: 'Bebidas' })
   @IsString()
   name!: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indica si la categoría está activa o no',
+  })
+  active!: boolean;
 }

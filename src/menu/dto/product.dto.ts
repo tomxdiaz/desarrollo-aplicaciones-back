@@ -38,4 +38,10 @@ export class ProductDto {
     nullable: true,
   })
   image!: string | null;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indica si el producto está activo o no',
+  })
+  active!: boolean;
 }

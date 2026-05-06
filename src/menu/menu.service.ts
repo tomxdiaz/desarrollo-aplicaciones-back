@@ -79,6 +79,7 @@ export class MenuService {
       .from('category')
       .select('*')
       .eq('menu_id', menu.id)
+      .eq('active', true)
       .order('id', { ascending: true });
 
     if (error) {
@@ -140,7 +141,7 @@ export class MenuService {
 
     const { data: category, error: categoryError } = await supabase
       .from('category')
-      .select('id, menu_id')
+      .select('id, menu_id, active')
       .eq('id', categoryId)
       .maybeSingle();
 
@@ -154,7 +155,7 @@ export class MenuService {
       );
     }
 
-    if (!category) {
+    if (!category || !category.active) {
       throw new NotFoundException('Categoría no encontrada');
     }
 
@@ -164,20 +165,43 @@ export class MenuService {
       );
     }
 
-    const { error: deleteError } = await supabase
-      .from('category')
-      .delete()
-      .eq('id', categoryId)
-      .eq('menu_id', menu.id);
+    const { error: productsDeleteError } = await supabase
+      .from('product')
+      .update({ active: false })
+      .eq('category_id', categoryId)
+      .eq('active', true);
 
-    if (deleteError) {
+    if (productsDeleteError) {
       this.logger.error(
-        `Error deleting category_id ${categoryId}: ${deleteError.message}`,
+        `Error deleting products for category_id ${categoryId}: ${productsDeleteError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al eliminar los productos de la categoría',
+      );
+    }
+
+    const { data: deletedCategory, error: categoryDeleteError } = await supabase
+      .from('category')
+      .update({ active: false })
+      .eq('id', categoryId)
+      .eq('menu_id', menu.id)
+      .eq('active', true)
+      .select('id')
+      .maybeSingle();
+
+    if (categoryDeleteError) {
+      this.logger.error(
+        `Error deleting category_id ${categoryId}: ${categoryDeleteError.message}`,
       );
 
       throw new InternalServerErrorException(
         'Error inesperado al eliminar la categoría',
       );
+    }
+
+    if (!deletedCategory) {
+      throw new NotFoundException('Categoría no encontrada');
     }
   }
 
@@ -190,7 +214,8 @@ export class MenuService {
     const { data: categories, error: categoriesError } = await supabase
       .from('category')
       .select('id')
-      .eq('menu_id', menu.id);
+      .eq('menu_id', menu.id)
+      .eq('active', true);
 
     if (categoriesError) {
       this.logger.error(
@@ -212,6 +237,7 @@ export class MenuService {
       .from('product')
       .select('*')
       .in('category_id', categoryIds)
+      .eq('active', true)
       .order('id', { ascending: true });
 
     if (error) {
@@ -241,8 +267,9 @@ export class MenuService {
 
     const { data: category, error: categoryError } = await supabase
       .from('category')
-      .select('id, menu_id')
+      .select('id, menu_id, active')
       .eq('id', createProductDto.category_id)
+      .eq('active', true)
       .maybeSingle();
 
     if (categoryError) {
@@ -312,6 +339,7 @@ export class MenuService {
       .from('product')
       .select('*, category!inner(id, menu_id)')
       .eq('id', productId)
+      .eq('active', true)
       .maybeSingle();
 
     if (productError) {
@@ -340,9 +368,10 @@ export class MenuService {
 
     const { data, error } = await supabase
       .from('product')
-      .delete()
+      .update({ active: false })
       .eq('id', productId)
       .eq('category_id', product.category_id)
+      .eq('active', true)
       .select('*')
       .maybeSingle();
 
@@ -434,6 +463,7 @@ export class MenuService {
       id: category.id,
       menu_id: category.menu_id,
       name: category.name,
+      active: category.active,
     };
   }
 
@@ -445,6 +475,7 @@ export class MenuService {
       description: product.description,
       price: product.price,
       image: product.image,
+      active: product.active,
     };
   }
 

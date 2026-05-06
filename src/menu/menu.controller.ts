@@ -159,7 +159,8 @@ export class MenuController {
   @Delete('restaurant/:restaurantId/menu/categories/:categoryId')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Eliminar una categoría del menú de un restaurante',
+    summary:
+      'Eliminar una categoría del menú de un restaurante (de forma lógica)',
   })
   @ApiOkResponse({
     description: 'Categoría eliminada correctamente',
@@ -248,7 +249,8 @@ export class MenuController {
 
   @Delete('restaurant/:restaurantId/menu/product/:productId')
   @ApiOperation({
-    summary: 'Eliminar un producto del menú de un restaurante',
+    summary:
+      'Eliminar un producto del menú de un restaurante (de forma lógica)',
   })
   @ApiBearerAuth()
   @ApiOkResponse({
