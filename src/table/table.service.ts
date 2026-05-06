@@ -1,10 +1,11 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tables, Enums } from '../supabase/database.types';
 import { CreateTableDto } from './dto/create-table.dto';
 import { TableDto } from './dto/table.dto';
@@ -13,12 +14,14 @@ type RestaurantTable = Tables<'restaurant_table'>;
 
 @Injectable()
 export class TableService {
+  private readonly logger = new Logger(TableService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findAllByRestaurant(restaurantId: number): Promise<TableDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    await this.assertRestaurantExists(supabase, restaurantId);
+    await this.ensureRestaurantExists(restaurantId);
 
     const { data, error } = await supabase
       .from('restaurant_table')
@@ -27,7 +30,13 @@ export class TableService {
       .order('id', { ascending: true });
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error finding tables for restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener las mesas',
+      );
     }
 
     return (data ?? []).map((table) => this.toTableDto(table));
@@ -39,7 +48,7 @@ export class TableService {
   ): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    await this.assertRestaurantExists(supabase, restaurantId);
+    await this.ensureRestaurantExists(restaurantId);
 
     const { data, error } = await supabase
       .from('restaurant_table')
@@ -53,7 +62,17 @@ export class TableService {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error creating table for restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('Datos inválidos para crear la mesa');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear la mesa',
+      );
     }
 
     return this.toTableDto(data);
@@ -62,7 +81,7 @@ export class TableService {
   async delete(restaurantId: number, tableId: number): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    await this.assertRestaurantExists(supabase, restaurantId);
+    await this.ensureRestaurantExists(restaurantId);
 
     const { data: existing, error: findError } = await supabase
       .from('restaurant_table')
@@ -72,22 +91,35 @@ export class TableService {
       .maybeSingle();
 
     if (findError) {
-      throw new InternalServerErrorException(findError.message);
+      this.logger.error(
+        `Error finding table_id ${tableId} for restaurant_id ${restaurantId}: ${findError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(findError)) {
+        throw new BadRequestException('tableId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener la mesa',
+      );
     }
 
     if (!existing) {
-      throw new NotFoundException(
-        `Table with id ${tableId} not found in restaurant ${restaurantId}`,
-      );
+      throw new NotFoundException('Mesa no encontrada');
     }
 
     const { error } = await supabase
       .from('restaurant_table')
       .delete()
-      .eq('id', tableId);
+      .eq('id', tableId)
+      .eq('restaurant_id', restaurantId);
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error deleting table_id ${tableId}: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        'Error inesperado al eliminar la mesa',
+      );
     }
 
     return this.toTableDto(existing);
@@ -100,7 +132,7 @@ export class TableService {
   ): Promise<TableDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    await this.assertRestaurantExists(supabase, restaurantId);
+    await this.ensureRestaurantExists(restaurantId);
 
     const { data, error } = await supabase
       .from('restaurant_table')
@@ -111,22 +143,31 @@ export class TableService {
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error updating status for table_id ${tableId} in restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para actualizar la mesa',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar la mesa',
+      );
     }
 
     if (!data) {
-      throw new NotFoundException(
-        `Table with id ${tableId} not found in restaurant ${restaurantId}`,
-      );
+      throw new NotFoundException('Mesa no encontrada');
     }
 
     return this.toTableDto(data);
   }
 
-  private async assertRestaurantExists(
-    supabase: SupabaseClient,
-    restaurantId: number,
-  ): Promise<void> {
+  private async ensureRestaurantExists(restaurantId: number): Promise<void> {
+    const supabase = this.supabaseService.getAdminClient();
+
     const { data, error } = await supabase
       .from('restaurant')
       .select('id')
@@ -134,13 +175,21 @@ export class TableService {
       .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(
+        `Error finding restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
+      );
     }
 
     if (!data) {
-      throw new NotFoundException(
-        `Restaurant with id ${restaurantId} not found`,
-      );
+      throw new NotFoundException('Restaurante no encontrado');
     }
   }
 
@@ -153,5 +202,20 @@ export class TableService {
       capacity: table.capacity,
       status: table.status,
     };
+  }
+
+  private isBadRequestDatabaseError(error: {
+    code?: string;
+    message?: string;
+  }): boolean {
+    const message = error.message?.toLowerCase() ?? '';
+
+    return (
+      error.code === '22P02' || // invalid_text_representation
+      error.code === '23502' || // not_null_violation
+      error.code === '23505' || // unique_violation
+      error.code === '23514' || // check_violation
+      message.includes('invalid input syntax')
+    );
   }
 }
