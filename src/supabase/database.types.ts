@@ -7,11 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '14.4';
-  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -59,16 +54,19 @@ export type Database = {
       };
       category: {
         Row: {
+          active: boolean;
           id: number;
           menu_id: number;
           name: string;
         };
         Insert: {
+          active?: boolean;
           id?: never;
           menu_id: number;
           name: string;
         };
         Update: {
+          active?: boolean;
           id?: never;
           menu_id?: number;
           name?: string;
@@ -113,23 +111,35 @@ export type Database = {
         Row: {
           id: number;
           order_id: number;
-          product_id: number;
+          product_description: string | null;
+          product_id: number | null;
+          product_image: string | null;
+          product_name: string;
           quantity: number;
           subtotal: number;
+          unit_price: number;
         };
         Insert: {
           id?: never;
           order_id: number;
-          product_id: number;
+          product_description?: string | null;
+          product_id?: number | null;
+          product_image?: string | null;
+          product_name: string;
           quantity: number;
           subtotal: number;
+          unit_price: number;
         };
         Update: {
           id?: never;
           order_id?: number;
-          product_id?: number;
+          product_description?: string | null;
+          product_id?: number | null;
+          product_image?: string | null;
+          product_name?: string;
           quantity?: number;
           subtotal?: number;
+          unit_price?: number;
         };
         Relationships: [
           {
@@ -139,17 +149,11 @@ export type Database = {
             referencedRelation: 'restaurant_order';
             referencedColumns: ['id'];
           },
-          {
-            foreignKeyName: 'order_item_product_id_fkey';
-            columns: ['product_id'];
-            isOneToOne: false;
-            referencedRelation: 'product';
-            referencedColumns: ['id'];
-          },
         ];
       };
       product: {
         Row: {
+          active: boolean;
           category_id: number;
           description: string | null;
           id: number;
@@ -158,6 +162,7 @@ export type Database = {
           price: number;
         };
         Insert: {
+          active?: boolean;
           category_id: number;
           description?: string | null;
           id?: never;
@@ -166,6 +171,7 @@ export type Database = {
           price: number;
         };
         Update: {
+          active?: boolean;
           category_id?: number;
           description?: string | null;
           id?: never;
@@ -219,6 +225,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: number;
+          note: string | null;
           number: number;
           restaurant_id: number;
           status: Database['public']['Enums']['restaurant_order_status'];
@@ -229,6 +236,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: never;
+          note?: string | null;
           number: number;
           restaurant_id: number;
           status?: Database['public']['Enums']['restaurant_order_status'];
@@ -239,6 +247,7 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: never;
+          note?: string | null;
           number?: number;
           restaurant_id?: number;
           status?: Database['public']['Enums']['restaurant_order_status'];

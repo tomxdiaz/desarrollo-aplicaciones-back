@@ -42,4 +42,9 @@ export class OrderDto {
   @ApiPropertyOptional({ type: [OrderItemDto] })
   @IsOptional()
   items?: OrderItemDto[];
+
+  @ApiPropertyOptional({ example: 'Sin cebolla por favor', nullable: true })
+  @IsOptional()
+  @IsString()
+  note!: string | null;
 }

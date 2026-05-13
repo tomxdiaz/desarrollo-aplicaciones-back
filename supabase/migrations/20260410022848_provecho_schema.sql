@@ -34,7 +34,8 @@ create table public.menu (
 create table public.category (
   id bigint generated always as identity primary key,
   menu_id bigint not null references public.menu(id) on delete cascade,
-  name text not null
+  name text not null,
+  active boolean not null default true
 );
 
 create table public.product (
@@ -43,7 +44,8 @@ create table public.product (
   name text not null,
   description text,
   price numeric(10,2) not null check (price >= 0),
-  image text
+  image text,
+  active boolean not null default true
 );
 
 create table public.restaurant_table (
@@ -65,13 +67,20 @@ create table public.restaurant_order (
   created_at timestamptz not null default now(),
   status public.restaurant_order_status not null default 'PENDING',
   total numeric(10,2) not null default 0 check (total >= 0),
+  note text,
   unique (restaurant_id, number)
 );
 
 create table public.order_item (
   id bigint generated always as identity primary key,
   order_id bigint not null references public.restaurant_order(id) on delete cascade,
-  product_id bigint not null references public.product(id) on delete restrict,
+
+  product_id bigint,
+  product_name text not null,
+  product_description text,
+  product_image text,
+  unit_price numeric(10,2) not null check (unit_price >= 0),
+
   quantity integer not null check (quantity > 0),
   subtotal numeric(10,2) not null check (subtotal >= 0)
 );

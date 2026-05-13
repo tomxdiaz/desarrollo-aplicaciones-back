@@ -1,4 +1,10 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { AppUserDto } from './dto/app_user.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { Tables } from '../supabase/database.types';
@@ -8,6 +14,8 @@ type AppUser = Tables<'app_user'>;
 
 @Injectable()
 export class AppUserService {
+  private readonly logger = new Logger(AppUserService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findById(id: string): Promise<AppUserDto> {
@@ -17,10 +25,18 @@ export class AppUserService {
       .from('app_user')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error finding app_user by id: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el usuario',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     return this.toAppUserDto(data);
@@ -35,7 +51,11 @@ export class AppUserService {
       .order('id', { ascending: true });
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error finding all app_users: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los usuarios',
+      );
     }
 
     return (data ?? []).map((appUser) => this.toAppUserDto(appUser));
@@ -43,15 +63,23 @@ export class AppUserService {
 
   async findByEmail(email: string): Promise<AppUserDto | null> {
     const supabase = this.supabaseService.getAdminClient();
+
     const { data, error } = await supabase
       .from('app_user')
       .select('*')
       .eq('email', email)
       .maybeSingle();
+
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error finding app_user by email: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el usuario',
+      );
     }
+
     if (!data) return null;
+
     return this.toAppUserDto(data);
   }
 
@@ -60,6 +88,14 @@ export class AppUserService {
   ): Promise<AppUserDto> {
     const supabase = this.supabaseService.getClient();
 
+    if (!updateGlobalRoleDto.appUserId) {
+      throw new BadRequestException('El id del usuario es requerido');
+    }
+
+    if (!updateGlobalRoleDto.role) {
+      throw new BadRequestException('El rol es requerido');
+    }
+
     const { data, error } = await supabase
       .from('app_user')
       .update({
@@ -67,10 +103,22 @@ export class AppUserService {
       })
       .eq('id', updateGlobalRoleDto.appUserId)
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (error) {
-      throw new InternalServerErrorException(error.message);
+      this.logger.error(`Error updating global role: ${error.message}`);
+
+      if (this.isInvalidInputError(error)) {
+        throw new BadRequestException('Datos inválidos para actualizar el rol');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el rol global',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Usuario a actualizar no encontrado');
     }
 
     return this.toAppUserDto(data);
@@ -82,5 +130,12 @@ export class AppUserService {
       email: appUser.email,
       global_role: appUser.global_role,
     };
+  }
+
+  private isInvalidInputError(error: { code?: string; message?: string }) {
+    return (
+      error.code === '22P02' ||
+      error.message?.toLowerCase().includes('invalid input syntax')
+    );
   }
 }

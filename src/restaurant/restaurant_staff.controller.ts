@@ -7,13 +7,20 @@ import {
   UseGuards,
   ParseIntPipe,
   Get,
+  BadRequestException,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
-  ApiTags,
-  ApiOperation,
   ApiBody,
-  ApiResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
@@ -35,25 +42,28 @@ export class RestaurantStaffController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener el personal de un restaurante' })
+  @ApiOkResponse({
+    description: 'Personal del restaurante obtenido correctamente',
+    type: StaffDto,
+    isArray: true,
+  })
+  @ApiBadRequestResponse({
+    description: 'restaurantId inválido',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes en este restaurante',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
   @RestaurantRoles(RestaurantStaffRole.ADMIN)
-  @ApiResponse({
-    status: 200,
-    description: 'List of staff members',
-    schema: {
-      example: [
-        {
-          user_id: 'user-123',
-          role: 'ADMIN',
-          app_user: { email: 'staff1@example.com' },
-        },
-      ],
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Restaurant not found or user is not staff of this restaurant',
-  })
   async getStaff(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
   ): Promise<StaffDto[]> {
@@ -63,17 +73,18 @@ export class RestaurantStaffController {
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Agregar personal a un restaurante' })
-  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles(RestaurantStaffRole.ADMIN)
   @ApiBody({
     type: CreateStaffDto,
     examples: {
       admin: {
-        summary: 'Add admin staff',
-        value: { email: 'staff1@example.com', role: RestaurantStaffRole.ADMIN },
+        summary: 'Agregar staff ADMIN',
+        value: {
+          email: 'staff1@example.com',
+          role: RestaurantStaffRole.ADMIN,
+        },
       },
       cashier: {
-        summary: 'Add cashier staff',
+        summary: 'Agregar staff CASHIER',
         value: {
           email: 'staff2@example.com',
           role: RestaurantStaffRole.CASHIER,
@@ -81,30 +92,71 @@ export class RestaurantStaffController {
       },
     },
   })
-  @ApiResponse({
-    status: 201,
-    description: 'Staff added',
-    schema: { example: { success: true } },
+  @ApiCreatedResponse({
+    description: 'Personal agregado correctamente',
+    schema: {
+      example: {
+        success: true,
+      },
+    },
   })
-  @ApiResponse({
-    status: 400,
-    description: 'User with this email does not exist',
+  @ApiBadRequestResponse({
+    description:
+      'restaurantId inválido, body inválido o usuario con ese email inexistente',
   })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes en este restaurante',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN)
   async addStaff(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() dto: CreateStaffDto,
   ) {
     const user = await this.appUserService.findByEmail(dto.email);
+
     if (!user) {
-      // Use BadRequestException for 400
-      throw new Error('User with this email does not exist');
+      throw new BadRequestException('User with this email does not exist');
     }
+
     return this.staffService.addStaff(restaurantId, user.id, dto.role);
   }
 
   @Delete(':userId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar personal de un restaurante' })
+  @ApiOkResponse({
+    description: 'Personal eliminado correctamente',
+    schema: {
+      example: {
+        success: true,
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'restaurantId inválido o userId inválido',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes en este restaurante',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante o usuario del staff no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
   @RestaurantRoles(RestaurantStaffRole.ADMIN)
   async removeStaff(
