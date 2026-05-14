@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -7,6 +8,11 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { StaffDto } from './dto/staff.dto';
+import type { Tables } from '../supabase/database.types';
+import { AppRole } from '../utils/enums/roles';
+import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
+
+type AppUser = Tables<'app_user'>;
 
 @Injectable()
 export class RestaurantStaffService {
@@ -41,7 +47,7 @@ export class RestaurantStaffService {
   async addStaff(
     restaurantId: number,
     userId: string,
-    role: 'ADMIN' | 'CASHIER_PLUS' | 'CASHIER',
+    role: RestaurantStaffRole,
   ) {
     const client = this.supabase.getAdminClient();
 
@@ -70,30 +76,6 @@ export class RestaurantStaffService {
       );
     }
 
-    if (role === 'ADMIN') {
-      const { count, error: adminError } = await client
-        .from('restaurant_staff')
-        .select('id', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurantId)
-        .eq('role', 'ADMIN');
-
-      if (adminError) {
-        this.logger.error(
-          `Error checking admin staff for restaurant_id ${restaurantId}: ${adminError.message}`,
-        );
-
-        throw new InternalServerErrorException(
-          'Error inesperado al validar administradores del restaurante',
-        );
-      }
-
-      if ((count ?? 0) > 0) {
-        throw new BadRequestException(
-          'Ya existe un ADMIN para este restaurante',
-        );
-      }
-    }
-
     const { error } = await client.from('restaurant_staff').insert({
       restaurant_id: restaurantId,
       user_id: userId,
@@ -119,6 +101,110 @@ export class RestaurantStaffService {
     }
 
     return { success: true };
+  }
+
+  async updateStaffRole(
+    restaurantId: number,
+    userId: string,
+    role: RestaurantStaffRole,
+    actor: AppUser,
+  ): Promise<StaffDto> {
+    const client = this.supabase.getAdminClient();
+
+    const ownerId = await this.getRestaurantOwnerId(restaurantId);
+
+    const { data: targetStaff, error: targetError } = await client
+      .from('restaurant_staff')
+      .select('id, role, user_id')
+      .eq('restaurant_id', restaurantId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (targetError) {
+      this.logger.error(
+        `Error finding target staff for restaurant_id ${restaurantId}, user_id ${userId}: ${targetError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al validar el personal del restaurante',
+      );
+    }
+
+    if (!targetStaff) {
+      throw new NotFoundException(
+        'El usuario no pertenece al personal de este restaurante',
+      );
+    }
+
+    const isSuperUser = actor.global_role === AppRole.SUPER_USER;
+    const isOwner = actor.id === ownerId;
+
+    if (!isSuperUser && !isOwner) {
+      const { data: actorStaff, error: actorStaffError } = await client
+        .from('restaurant_staff')
+        .select('role')
+        .eq('restaurant_id', restaurantId)
+        .eq('user_id', actor.id)
+        .maybeSingle();
+
+      if (actorStaffError) {
+        this.logger.error(
+          `Error finding actor staff for restaurant_id ${restaurantId}, user_id ${actor.id}: ${actorStaffError.message}`,
+        );
+
+        throw new InternalServerErrorException(
+          'Error inesperado al validar el rol del usuario en el restaurante',
+        );
+      }
+
+      if (!actorStaff) {
+        throw new ForbiddenException(
+          'No tenés permisos para gestionar este restaurante',
+        );
+      }
+
+      const actorRank = this.getStaffRoleRank(actorStaff.role);
+      const targetRank = this.getStaffRoleRank(targetStaff.role);
+      const newRank = this.getStaffRoleRank(role);
+
+      if (actorRank <= targetRank || actorRank <= newRank) {
+        throw new ForbiddenException(
+          'No tenés permisos para editar este rol',
+        );
+      }
+    }
+
+    const { data, error } = await client
+      .from('restaurant_staff')
+      .update({ role })
+      .eq('restaurant_id', restaurantId)
+      .eq('user_id', userId)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error updating staff role for restaurant_id ${restaurantId}, user_id ${userId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para actualizar el rol del personal',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el rol del personal',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(
+        'El usuario no pertenece al personal de este restaurante',
+      );
+    }
+
+    return data;
   }
 
   async removeStaff(restaurantId: number, userId: string) {
@@ -193,6 +279,47 @@ export class RestaurantStaffService {
     if (!data) {
       throw new NotFoundException('Restaurante no encontrado');
     }
+  }
+
+  private async getRestaurantOwnerId(restaurantId: number): Promise<string> {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from('restaurant')
+      .select('owner_id')
+      .eq('id', restaurantId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error finding restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el restaurante',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Restaurante no encontrado');
+    }
+
+    return data.owner_id;
+  }
+
+  private getStaffRoleRank(role: RestaurantStaffRole): number {
+    if (role === 'ADMIN') {
+      return 3;
+    }
+
+    if (role === 'CASHIER_PLUS') {
+      return 2;
+    }
+
+    return 1;
   }
 
   private isForeignKeyViolation(error: { code?: string }): boolean {
