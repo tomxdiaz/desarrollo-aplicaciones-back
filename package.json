@@ -8,7 +8,7 @@
   "scripts": {
     "start:dev": "cross-env NODE_ENV=dev ENV_FILE=.env.dev nest start --watch",
     "ngrok": "ngrok http 8080",
-    "ngrok:supabase": "ngrok http 55000",
+    "ngrok:supabase": "ngrok http 55500",
     "build": "nest build",
     "start:prod": "cross-env NODE_ENV=prod node dist/main",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
