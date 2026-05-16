@@ -2,19 +2,19 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
-  IsInt,
   IsOptional,
-  IsPositive,
   IsString,
   ValidateNested,
 } from 'class-validator';
 import { CreateOrderItemDto } from './create-order-item.dto';
 
 export class CreateOrderDto {
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  @IsPositive()
-  table_id!: number;
+  @ApiProperty({
+    example: 'A1',
+    description: 'Código de la mesa (único por restaurante)',
+  })
+  @IsString()
+  table_code!: string;
 
   @ApiProperty({ type: [CreateOrderItemDto] })
   @ArrayNotEmpty()

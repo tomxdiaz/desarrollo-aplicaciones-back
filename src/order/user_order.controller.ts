@@ -1,4 +1,12 @@
-import { Controller, Post, UseGuards, Body, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseGuards,
+  Body,
+  Get,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -20,7 +28,7 @@ import { Tables } from '../supabase/database.types';
 type AppUser = Tables<'app_user'>;
 
 @ApiTags('orders')
-@Controller('orders')
+@Controller('restaurants/:restaurantId/orders')
 export class UserOrderController {
   constructor(private readonly orderService: OrderService) {}
 
@@ -49,9 +57,12 @@ export class UserOrderController {
   @UseGuards(SupabaseAuthGuard)
   async create(
     @CurrentAppUser appUser: AppUser,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() dto: CreateOrderDto,
   ): Promise<OrderDto> {
-    return await this.orderService.create(appUser.id, dto);
+    console.log('restaurantId:', restaurantId);
+
+    return await this.orderService.create(appUser.id, restaurantId, dto);
   }
 
   @Get('mine')
