@@ -309,11 +309,11 @@ export class RestaurantStaffService {
   }
 
   private getStaffRoleRank(role: RestaurantStaffRole): number {
-    if (role === 'ADMIN') {
+    if (role === RestaurantStaffRole.ADMIN) {
       return 3;
     }
 
-    if (role === 'CASHIER_PLUS') {
+    if (role === RestaurantStaffRole.CASHIER_PLUS) {
       return 2;
     }
 

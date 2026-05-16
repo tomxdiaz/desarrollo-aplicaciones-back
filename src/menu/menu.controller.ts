@@ -33,6 +33,7 @@ import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { ProductDto } from './dto/product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 
 type AppUser = Tables<'app_user'>;
 
@@ -65,7 +66,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async updateMenuName(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() updateMenuDto: UpdateMenuDto,
@@ -99,7 +100,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async createCategory(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
@@ -136,7 +137,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async deleteCategory(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('categoryId', ParseIntPipe) categoryId: number,
@@ -170,7 +171,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async createProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() createProductDto: CreateProductDto,
@@ -205,7 +206,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async updateProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('productId', ParseIntPipe) productId: number,
@@ -244,7 +245,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async deleteProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('productId', ParseIntPipe) productId: number,

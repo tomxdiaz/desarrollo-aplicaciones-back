@@ -7,7 +7,10 @@ export class CreateStaffDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: 'ADMIN' })
+  @ApiProperty({
+    example: RestaurantStaffRole.ADMIN,
+    enum: RestaurantStaffRole,
+  })
   @IsEnum(RestaurantStaffRole)
   role!: RestaurantStaffRole;
 }
