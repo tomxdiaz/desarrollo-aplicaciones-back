@@ -52,8 +52,6 @@ export class OrderService {
   ): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    console.log('restaurantId:', restaurantId);
-
     if (!dto.table_code || restaurantId == null) {
       throw new BadRequestException('Se requiere table_code y restaurantId');
     }

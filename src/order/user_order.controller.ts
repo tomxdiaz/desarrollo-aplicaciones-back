@@ -60,8 +60,6 @@ export class UserOrderController {
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() dto: CreateOrderDto,
   ): Promise<OrderDto> {
-    console.log('restaurantId:', restaurantId);
-
     return await this.orderService.create(appUser.id, restaurantId, dto);
   }
 

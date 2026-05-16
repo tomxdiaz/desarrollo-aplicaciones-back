@@ -10,7 +10,7 @@ import { CreateOrderItemDto } from './create-order-item.dto';
 
 export class CreateOrderDto {
   @ApiProperty({
-    example: 'A1',
+    example: '1A',
     description: 'Código de la mesa (único por restaurante)',
   })
   @IsString()
