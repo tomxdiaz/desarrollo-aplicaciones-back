@@ -145,7 +145,8 @@ export class RestaurantStaffController {
     type: StaffDto,
   })
   @ApiBadRequestResponse({
-    description: 'restaurantId inválido o datos inválidos para actualizar el rol',
+    description:
+      'restaurantId inválido o datos inválidos para actualizar el rol',
   })
   @ApiUnauthorizedResponse({
     description: 'Token inválido, expirado o no enviado',

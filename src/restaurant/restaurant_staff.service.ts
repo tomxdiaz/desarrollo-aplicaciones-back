@@ -168,9 +168,7 @@ export class RestaurantStaffService {
       const newRank = this.getStaffRoleRank(role);
 
       if (actorRank <= targetRank || actorRank <= newRank) {
-        throw new ForbiddenException(
-          'No tenés permisos para editar este rol',
-        );
+        throw new ForbiddenException('No tenés permisos para editar este rol');
       }
     }
 
