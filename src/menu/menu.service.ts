@@ -74,6 +74,10 @@ export class MenuService {
       throw new NotFoundException('Restaurante o menú no encontrado');
     }
 
+    if (!data) {
+      throw new NotFoundException('Restaurante o menú no encontrado');
+    }
+
     return this.toMenuDto(data);
   }
 
@@ -304,6 +308,188 @@ export class MenuService {
       .eq('id', productId)
       .eq('category_id', existingProduct.category_id)
       .eq('active', true)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error deleting product_id ${productId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al eliminar el producto',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    return this.toProductDto(data);
+  }
+
+  async findProductsByRestaurantId(
+    restaurantId: number,
+  ): Promise<ProductDto[]> {
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data: categories, error: categoriesError } = await supabase
+      .from('category')
+      .select('id')
+      .eq('menu_id', menu.id);
+
+    if (categoriesError) {
+      this.logger.error(
+        `Error finding categories for menu_id ${menu.id}: ${categoriesError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener las categorías',
+      );
+    }
+
+    const categoryIds = (categories ?? []).map((category) => category.id);
+
+    if (categoryIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .select('*')
+      .in('category_id', categoryIds)
+      .order('id', { ascending: true });
+
+    if (error) {
+      this.logger.error(
+        `Error finding products for menu_id ${menu.id}: ${error.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('restaurantId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los productos',
+      );
+    }
+
+    return (data ?? []).map((product) => this.toProductDto(product));
+  }
+
+  async createProduct(
+    restaurantId: number,
+    createProductDto: CreateProductDto,
+  ): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    const { data: category, error: categoryError } = await supabase
+      .from('category')
+      .select('id, menu_id')
+      .eq('id', createProductDto.category_id)
+      .maybeSingle();
+
+    if (categoryError) {
+      this.logger.error(
+        `Error finding category_id ${createProductDto.category_id}: ${categoryError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(categoryError)) {
+        throw new BadRequestException('Datos inválidos para crear el producto');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener la categoría',
+      );
+    }
+
+    if (!category) {
+      throw new NotFoundException('Categoría no encontrada');
+    }
+
+    if (category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'La categoría no pertenece a este restaurante',
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .insert({
+        category_id: createProductDto.category_id,
+        name: createProductDto.name,
+        description: createProductDto.description,
+        price: createProductDto.price,
+        image: createProductDto.image,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      this.logger.error(`Error creating product: ${error.message}`);
+
+      if (this.isForeignKeyViolation(error)) {
+        throw new NotFoundException('Categoría no encontrada');
+      }
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException('Datos inválidos para crear el producto');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al crear el producto',
+      );
+    }
+
+    return this.toProductDto(data);
+  }
+
+  async deleteProduct(
+    restaurantId: number,
+    productId: number,
+  ): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    const { data: product, error: productError } = await supabase
+      .from('product')
+      .select('*, category!inner(id, menu_id)')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (productError) {
+      this.logger.error(
+        `Error finding product_id ${productId}: ${productError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(productError)) {
+        throw new BadRequestException('productId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el producto',
+      );
+    }
+
+    if (!product) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    if (product.category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'El producto no pertenece a este restaurante',
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .delete()
+      .eq('id', productId)
+      .eq('category_id', product.category_id)
       .select('*')
       .maybeSingle();
 
