@@ -1,4 +1,12 @@
-import { Controller, Post, UseGuards, Body, Get, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseGuards,
+  Body,
+  Get,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -52,6 +60,8 @@ export class UserOrderController {
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() dto: CreateOrderDto,
   ): Promise<OrderDto> {
+    console.log('restaurantId:', restaurantId);
+
     return await this.orderService.create(appUser.id, restaurantId, dto);
   }
 

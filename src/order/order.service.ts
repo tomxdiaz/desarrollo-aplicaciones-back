@@ -45,8 +45,14 @@ export class OrderService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async create(userId: string, restaurantId: number, dto: CreateOrderDto): Promise<OrderDto> {
+  async create(
+    userId: string,
+    restaurantId: number,
+    dto: CreateOrderDto,
+  ): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
+
+    console.log('restaurantId:', restaurantId);
 
     if (!dto.table_code || restaurantId == null) {
       throw new BadRequestException('Se requiere table_code y restaurantId');
@@ -96,10 +102,8 @@ export class OrderService {
     }
 
     const productIds = [...new Set(dto.items.map((i) => i.product_id))];
-    
-    try {
 
-      const { data: products, error: productsError } = await supabase
+    const { data: products, error: productsError } = await supabase
       .from('product')
       .select(
         `
@@ -122,13 +126,7 @@ export class OrderService {
       .in('id', productIds)
       .eq('active', true)
       .eq('category.active', true);
-      
-    } catch (error) {
-      console.error('Unexpected error fetching products for order:', error);
-      
-    }
 
-    /*
     if (productsError) {
       this.logger.error(
         `Error finding products for order. productIds=${JSON.stringify(productIds)} restaurant_id=${table.restaurant_id} error=${productsError.message}`,
@@ -142,9 +140,8 @@ export class OrderService {
         'Error inesperado al obtener los productos',
       );
     }
-    */
 
-    const productsForOrder = ( []) as unknown as ProductForOrder[];
+    const productsForOrder = products as ProductForOrder[];
 
     const productMap = new Map<number, ProductForOrder>(
       productsForOrder.map((product) => [product.id, product]),
