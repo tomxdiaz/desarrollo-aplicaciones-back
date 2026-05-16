@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -17,30 +18,6 @@ export class TableService {
   private readonly logger = new Logger(TableService.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
-
-  async findAllByRestaurant(restaurantId: number): Promise<TableDto[]> {
-    const supabase = this.supabaseService.getClient();
-
-    await this.ensureRestaurantExists(restaurantId);
-
-    const { data, error } = await supabase
-      .from('restaurant_table')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('id', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Error finding tables for restaurant_id ${restaurantId}: ${error.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener las mesas',
-      );
-    }
-
-    return (data ?? []).map((table) => this.toTableDto(table));
-  }
 
   async create(
     restaurantId: number,
@@ -65,6 +42,12 @@ export class TableService {
       this.logger.error(
         `Error creating table for restaurant_id ${restaurantId}: ${error.message}`,
       );
+
+      if (error.code === '23505') {
+        throw new ConflictException(
+          `Ya existe una mesa con el código '${createTableDto.code}' en este restaurante`,
+        );
+      }
 
       if (this.isBadRequestDatabaseError(error)) {
         throw new BadRequestException('Datos inválidos para crear la mesa');
@@ -193,7 +176,7 @@ export class TableService {
     }
   }
 
-  private toTableDto(table: RestaurantTable): TableDto {
+  public toTableDto(table: RestaurantTable): TableDto {
     return {
       id: table.id,
       restaurant_id: table.restaurant_id,

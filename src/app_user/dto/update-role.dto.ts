@@ -10,7 +10,7 @@ export class UpdateGlobalRoleDto {
   @IsUUID()
   appUserId!: string;
 
-  @ApiProperty({ enum: Object.values(AppRole), example: 'OWNER' })
+  @ApiProperty({ example: AppRole.OWNER, enum: AppRole })
   @IsEnum(AppRole, {
     message: `role must be one of: ${Object.values(AppRole).join(', ')}`,
   })

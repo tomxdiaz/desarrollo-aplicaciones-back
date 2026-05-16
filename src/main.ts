@@ -5,10 +5,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // app.enableCors({
+  //   origin: ['*'],
+  //   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  //   allowedHeaders: ['Content-Type', 'Authorization'],
+  // });
+
+  app.enableCors();
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      forbidNonWhitelisted: true,
     }),
   );
 
@@ -35,7 +45,7 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 8080);
+  await app.listen(process.env.PORT ?? 8080, '0.0.0.0');
 
   console.log(`Application is running on: ${await app.getUrl()}`);
 }

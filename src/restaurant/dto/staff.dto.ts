@@ -14,7 +14,10 @@ export class StaffDto {
   @IsInt()
   id!: number;
 
-  @ApiProperty({ example: 'ADMIN' })
+  @ApiProperty({
+    example: RestaurantStaffRole.ADMIN,
+    enum: RestaurantStaffRole,
+  })
   @IsEnum(RestaurantStaffRole)
   role!: RestaurantStaffRole;
 }

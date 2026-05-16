@@ -14,7 +14,7 @@ export class AppUserDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ enum: AppRole, example: 'USER' })
+  @ApiProperty({ example: AppRole.USER, enum: AppRole })
   @IsEnum(AppRole, {
     message: `global_role must be one of: ${Object.values(AppRole).join(', ')}`,
   })

@@ -26,7 +26,7 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.warn(`Sign in failed: ${error.message}`);
+      this.logger.warn(`Sign in failed: ${error}`);
 
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -55,7 +55,7 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.warn(`Sign up failed: ${error.message}`);
+      this.logger.warn(`Sign up failed: ${error}`);
 
       throw new BadRequestException(
         'Datos inválidos para registrar usuario o usuario ya existente',

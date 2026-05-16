@@ -6,9 +6,11 @@ import { RestaurantService } from './restaurant.service';
 import { RestaurantStaffController } from './restaurant_staff.controller';
 import { RestaurantStaffService } from './restaurant_staff.service';
 import { AppUserService } from '../app_user/app_user.service';
+import { TableModule } from '../table/table.module';
+import { MenuModule } from '../menu/menu.module';
 
 @Module({
-  imports: [SupabaseModule, AuthModule],
+  imports: [SupabaseModule, AuthModule, TableModule, MenuModule],
   controllers: [RestaurantController, RestaurantStaffController],
   providers: [RestaurantService, RestaurantStaffService, AppUserService],
 })

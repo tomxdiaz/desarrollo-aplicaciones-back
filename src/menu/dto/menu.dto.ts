@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { CategoryDto } from './category.dto';
+import { Type } from 'class-transformer';
 
 export class MenuDto {
   @ApiProperty({ example: 1 })
@@ -14,4 +22,11 @@ export class MenuDto {
   @IsOptional()
   @IsString()
   name!: string | null;
+
+  @ApiPropertyOptional({ type: () => CategoryDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CategoryDto)
+  categories?: CategoryDto[];
 }

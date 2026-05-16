@@ -13,6 +13,21 @@ import { RestaurantOrderStatus } from '../utils/enums/restaurant-order-status';
 
 type RestaurantOrder = Tables<'restaurant_order'>;
 type OrderItem = Tables<'order_item'>;
+type Product = Tables<'product'>;
+
+type ProductForOrder = Pick<
+  Product,
+  'id' | 'name' | 'description' | 'image' | 'price' | 'active'
+> & {
+  category: {
+    id: number;
+    active: boolean;
+    menu: {
+      id: number;
+      restaurant_id: number;
+    };
+  };
+};
 
 const VALID_TRANSITIONS: Record<
   RestaurantOrderStatus,
@@ -30,11 +45,15 @@ export class OrderService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async create(userId: string, dto: CreateOrderDto): Promise<OrderDto> {
+  async create(
+    userId: string,
+    restaurantId: number,
+    dto: CreateOrderDto,
+  ): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    if (!dto.table_id) {
-      throw new BadRequestException('La mesa es requerida');
+    if (!dto.table_code || restaurantId == null) {
+      throw new BadRequestException('Se requiere table_code y restaurantId');
     }
 
     if (!dto.items?.length) {
@@ -58,12 +77,13 @@ export class OrderService {
     const { data: table, error: tableError } = await supabase
       .from('restaurant_table')
       .select('id, restaurant_id')
-      .eq('id', dto.table_id)
+      .eq('code', dto.table_code)
+      .eq('restaurant_id', restaurantId)
       .maybeSingle();
 
     if (tableError) {
       this.logger.error(
-        `Error finding restaurant_table ${dto.table_id}: ${tableError.message}`,
+        `Error finding restaurant_table code=${dto.table_code} restaurant_id=${restaurantId}: ${tableError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(tableError)) {
@@ -79,16 +99,21 @@ export class OrderService {
       throw new NotFoundException('Mesa no encontrada');
     }
 
-    const productIds = dto.items.map((i) => i.product_id);
+    const productIds = [...new Set(dto.items.map((i) => i.product_id))];
 
     const { data: products, error: productsError } = await supabase
       .from('product')
       .select(
         `
         id,
+        name,
+        description,
+        image,
         price,
+        active,
         category!inner(
           id,
+          active,
           menu!inner(
             id,
             restaurant_id
@@ -96,11 +121,13 @@ export class OrderService {
         )
       `,
       )
-      .in('id', productIds);
+      .in('id', productIds)
+      .eq('active', true)
+      .eq('category.active', true);
 
     if (productsError) {
       this.logger.error(
-        `Error finding products for order: ${productsError.message}`,
+        `Error finding products for order. productIds=${JSON.stringify(productIds)} restaurant_id=${table.restaurant_id} error=${productsError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(productsError)) {
@@ -112,24 +139,28 @@ export class OrderService {
       );
     }
 
-    const productMap = new Map((products ?? []).map((p) => [p.id, p.price]));
+    const productsForOrder = products as ProductForOrder[];
+
+    const productMap = new Map<number, ProductForOrder>(
+      productsForOrder.map((product) => [product.id, product]),
+    );
 
     for (const item of dto.items) {
-      const product = products?.find((p) => p.id === item.product_id);
+      const product = productMap.get(item.product_id);
 
       if (!product) {
+        this.logger.warn(
+          `Requested product id ${item.product_id} not returned from DB. availableProductIds=${JSON.stringify(
+            Array.from(productMap.keys()),
+          )}`,
+        );
+
         throw new NotFoundException(
-          `Producto con id ${item.product_id} no encontrado`,
+          `Producto con id ${item.product_id} no encontrado o no pertenece al restaurante`,
         );
       }
 
-      const productCategory = product.category as unknown as {
-        menu: {
-          restaurant_id: number;
-        };
-      };
-
-      if (productCategory.menu.restaurant_id !== table.restaurant_id) {
+      if (product.category.menu.restaurant_id !== table.restaurant_id) {
         throw new BadRequestException(
           `El producto con id ${item.product_id} no pertenece al restaurante de la mesa`,
         );
@@ -151,20 +182,23 @@ export class OrderService {
       );
     }
 
-    const total = dto.items.reduce(
-      (sum, item) => sum + productMap.get(item.product_id)! * item.quantity,
-      0,
-    );
+    const total = dto.items.reduce((sum, item) => {
+      const product = productMap.get(item.product_id)!;
+      const unitPrice = Number(product.price);
+
+      return sum + unitPrice * item.quantity;
+    }, 0);
 
     const { data: order, error: orderError } = await supabase
       .from('restaurant_order')
       .insert({
         restaurant_id: table.restaurant_id,
-        table_id: dto.table_id,
+        table_id: table.id,
         user_id: userId,
         number: (count ?? 0) + 1,
         status: RestaurantOrderStatus.PENDING,
         total,
+        note: dto.note,
       })
       .select()
       .single();
@@ -174,7 +208,7 @@ export class OrderService {
 
       if (this.isForeignKeyViolation(orderError)) {
         throw new NotFoundException(
-          'Restaurante, mesa, producto o usuario relacionado no encontrado',
+          'Restaurante, mesa o usuario relacionado no encontrado',
         );
       }
 
@@ -187,12 +221,23 @@ export class OrderService {
       );
     }
 
-    const itemsToInsert = dto.items.map((item) => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      subtotal: productMap.get(item.product_id)! * item.quantity,
-    }));
+    const itemsToInsert = dto.items.map((item) => {
+      const product = productMap.get(item.product_id)!;
+      const unitPrice = Number(product.price);
+
+      return {
+        order_id: order.id,
+
+        product_id: product.id,
+        product_name: product.name,
+        product_description: product.description,
+        product_image: product.image,
+        unit_price: unitPrice,
+
+        quantity: item.quantity,
+        subtotal: unitPrice * item.quantity,
+      };
+    });
 
     const { data: items, error: itemsError } = await supabase
       .from('order_item')
@@ -205,9 +250,7 @@ export class OrderService {
       );
 
       if (this.isForeignKeyViolation(itemsError)) {
-        throw new NotFoundException(
-          'Pedido o producto relacionado no encontrado',
-        );
+        throw new NotFoundException('Pedido relacionado no encontrado');
       }
 
       if (this.isBadRequestDatabaseError(itemsError)) {
@@ -407,10 +450,17 @@ export class OrderService {
       items: items.map((i) => ({
         id: i.id,
         order_id: i.order_id,
+
         product_id: i.product_id,
+        product_name: i.product_name,
+        product_description: i.product_description,
+        product_image: i.product_image,
+        unit_price: i.unit_price,
+
         quantity: i.quantity,
         subtotal: i.subtotal,
       })),
+      note: order.note,
     };
   }
 
