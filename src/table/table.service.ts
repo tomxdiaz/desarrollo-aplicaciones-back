@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -65,6 +66,12 @@ export class TableService {
       this.logger.error(
         `Error creating table for restaurant_id ${restaurantId}: ${error.message}`,
       );
+
+      if (error.code === '23505') {
+        throw new ConflictException(
+          `Ya existe una mesa con el código '${createTableDto.code}' en este restaurante`,
+        );
+      }
 
       if (this.isBadRequestDatabaseError(error)) {
         throw new BadRequestException('Datos inválidos para crear la mesa');
