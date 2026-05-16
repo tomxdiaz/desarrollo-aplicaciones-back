@@ -7,17 +7,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { Tables } from '../supabase/database.types';
+import type { Tables, TablesUpdate } from '../supabase/database.types';
 import { CategoryDto } from './dto/category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { MenuDto } from './dto/menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import { ProductDto } from './dto/product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 type Menu = Tables<'menu'>;
 type Category = Tables<'category'>;
 type Product = Tables<'product'>;
+type ProductUpdate = TablesUpdate<'product'>;
 
 @Injectable()
 export class MenuService {
@@ -496,5 +498,147 @@ export class MenuService {
       error.code === '23514' || // check_violation
       message.includes('invalid input syntax')
     );
+  }
+
+  /* ----------------
+  Actualizar producto
+  -----------------*/
+
+  async updateProduct(
+    restaurantId: number,
+    productId: number,
+    updateProductDto: UpdateProductDto,
+  ): Promise<ProductDto> {
+    const supabase = this.supabaseService.getAdminClient();
+    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
+
+    const patch = this.toProductUpdatePayload(updateProductDto);
+    if (Object.keys(patch).length === 0) {
+      throw new BadRequestException(
+        'Debe enviar al menos un campo a actualizar',
+      );
+    }
+
+    const { data: existing, error: productError } = await supabase
+      .from('product')
+      .select('*, category!inner(id, menu_id)')
+      .eq('id', productId)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (productError) {
+      this.logger.error(
+        `Error finding product_id ${productId}: ${productError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(productError)) {
+        throw new BadRequestException('productId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el producto',
+      );
+    }
+
+    if (!existing) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    if (existing.category.menu_id !== menu.id) {
+      throw new ForbiddenException(
+        'El producto no pertenece a este restaurante',
+      );
+    }
+
+    if (patch.category_id !== undefined) {
+      const { data: category, error: categoryError } = await supabase
+        .from('category')
+        .select('id, menu_id, active')
+        .eq('id', patch.category_id)
+        .eq('active', true)
+        .maybeSingle();
+
+      if (categoryError) {
+        this.logger.error(
+          `Error finding category_id ${patch.category_id}: ${categoryError.message}`,
+        );
+
+        if (this.isBadRequestDatabaseError(categoryError)) {
+          throw new BadRequestException(
+            'Datos inválidos para actualizar el producto',
+          );
+        }
+
+        throw new InternalServerErrorException(
+          'Error inesperado al obtener la categoría',
+        );
+      }
+
+      if (!category) {
+        throw new NotFoundException('Categoría no encontrada');
+      }
+
+      if (category.menu_id !== menu.id) {
+        throw new ForbiddenException(
+          'La categoría no pertenece a este restaurante',
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('product')
+      .update(patch)
+      .eq('id', productId)
+      .eq('active', true)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error updating product_id ${productId}: ${error.message}`,
+      );
+
+      if (this.isForeignKeyViolation(error)) {
+        throw new NotFoundException('Categoría no encontrada');
+      }
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para actualizar el producto',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el producto',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    return this.toProductDto(data);
+  }
+
+  private toProductUpdatePayload(dto: UpdateProductDto): ProductUpdate {
+    const patch: ProductUpdate = {};
+
+    if (dto.category_id !== undefined) {
+      patch.category_id = dto.category_id;
+    }
+    if (dto.name !== undefined) {
+      patch.name = dto.name;
+    }
+    if (dto.description !== undefined) {
+      patch.description = dto.description;
+    }
+    if (dto.price !== undefined) {
+      patch.price = dto.price;
+    }
+    if (dto.image !== undefined) {
+      patch.image = dto.image;
+    }
+
+    return patch;
   }
 }

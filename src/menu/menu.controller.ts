@@ -33,6 +33,7 @@ import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
 import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { ProductDto } from './dto/product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 type AppUser = Tables<'app_user'>;
 
@@ -245,6 +246,46 @@ export class MenuController {
     @Body() createProductDto: CreateProductDto,
   ): Promise<ProductDto> {
     return await this.menuService.createProduct(restaurantId, createProductDto);
+  }
+
+  @Patch('restaurant/:restaurantId/menu/product/:productId')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Actualizar un producto del menú de un restaurante',
+  })
+  @ApiOkResponse({
+    description: 'Producto actualizado correctamente',
+    type: ProductDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'restaurantId o productId inválido, cuerpo vacío o datos inválidos para actualizar el producto',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'El usuario no tiene permisos suficientes en este restaurante, o la categoría no pertenece a este menú',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante, menú, producto o categoría no encontrada',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  async updateProduct(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+    @Body() updateProductDto: UpdateProductDto,
+  ): Promise<ProductDto> {
+    return await this.menuService.updateProduct(
+      restaurantId,
+      productId,
+      updateProductDto,
+    );
   }
 
   @Delete('restaurant/:restaurantId/menu/product/:productId')
