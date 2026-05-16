@@ -9,7 +9,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import type { Tables } from '../supabase/database.types';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
-import { TableDto } from '../table/dto/table.dto';
+import { TableService } from '../table/table.service';
+import { MenuService } from '../menu/menu.service';
 
 type Restaurant = Tables<'restaurant'>;
 
@@ -17,14 +18,29 @@ type Restaurant = Tables<'restaurant'>;
 export class RestaurantService {
   private readonly logger = new Logger(RestaurantService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly tableService: TableService,
+    private readonly menuService: MenuService,
+  ) {}
 
   async findAll(): Promise<RestaurantDto[]> {
     const supabase = this.supabaseService.getClient();
 
     const { data, error } = await supabase
       .from('restaurant')
-      .select('*')
+      .select(
+        `*,
+          tables:restaurant_table (*),
+          menu (
+            *,
+            categories:category (
+              *,
+              products:product (*)
+            )
+          )
+        `,
+      )
       .order('id', { ascending: true });
 
     if (error) {
@@ -35,7 +51,21 @@ export class RestaurantService {
       );
     }
 
-    return (data ?? []).map((restaurant) => this.toRestaurantDto(restaurant));
+    return (data ?? []).map((restaurant) => {
+      const tables = (restaurant.tables ?? []).map((table) =>
+        this.tableService.toTableDto(table),
+      );
+
+      const menu = restaurant.menu
+        ? this.menuService.toMenuDto(restaurant.menu)
+        : undefined;
+
+      return {
+        ...this.toRestaurantDto(restaurant),
+        tables,
+        menu,
+      };
+    });
   }
 
   async create(
@@ -115,7 +145,18 @@ export class RestaurantService {
 
     const { data, error } = await supabase
       .from('restaurant')
-      .select('*, restaurant_table(*)')
+      .select(
+        `*,
+          tables:restaurant_table (*),
+          menu (
+            *,
+            categories:category (
+              *,
+              products:product (*)
+            )
+          )
+        `,
+      )
       .eq('id', id)
       .maybeSingle();
 
@@ -135,18 +176,16 @@ export class RestaurantService {
       throw new NotFoundException('Restaurante no encontrado');
     }
 
-    const tables: TableDto[] = (data.restaurant_table ?? []).map((table) => ({
-      id: table.id,
-      restaurant_id: table.restaurant_id,
-      code: table.code,
-      area: table.area,
-      capacity: table.capacity,
-      status: table.status,
-    }));
+    const tables = (data.tables ?? []).map((table) =>
+      this.tableService.toTableDto(table),
+    );
+
+    const menu = data.menu ? this.menuService.toMenuDto(data.menu) : undefined;
 
     return {
       ...this.toRestaurantDto(data),
       tables,
+      menu,
     };
   }
 

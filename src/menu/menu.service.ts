@@ -21,6 +21,18 @@ type Category = Tables<'category'>;
 type Product = Tables<'product'>;
 type ProductUpdate = TablesUpdate<'product'>;
 
+type CategoryWithProducts = Category & {
+  products?: Product[];
+};
+
+type MenuWithCategories = Menu & {
+  categories?: CategoryWithProducts[];
+};
+
+type ProductWithCategory = Product & {
+  category: Pick<Category, 'id' | 'menu_id'>;
+};
+
 @Injectable()
 export class MenuService {
   private readonly logger = new Logger(MenuService.name);
@@ -63,38 +75,6 @@ export class MenuService {
     }
 
     return this.toMenuDto(data);
-  }
-
-  async findMenuByRestaurantId(restaurantId: number): Promise<MenuDto> {
-    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-
-    return this.toMenuDto(menu);
-  }
-
-  async findCategoriesByRestaurantId(
-    restaurantId: number,
-  ): Promise<CategoryDto[]> {
-    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-    const supabase = this.supabaseService.getAdminClient();
-
-    const { data, error } = await supabase
-      .from('category')
-      .select('*')
-      .eq('menu_id', menu.id)
-      .eq('active', true)
-      .order('id', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Error finding categories for menu_id ${menu.id}: ${error.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener las categorías',
-      );
-    }
-
-    return (data ?? []).map((category) => this.toCategoryDto(category));
   }
 
   async createCategory(
@@ -207,58 +187,6 @@ export class MenuService {
     }
   }
 
-  async findProductsByRestaurantId(
-    restaurantId: number,
-  ): Promise<ProductDto[]> {
-    const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
-    const supabase = this.supabaseService.getAdminClient();
-
-    const { data: categories, error: categoriesError } = await supabase
-      .from('category')
-      .select('id')
-      .eq('menu_id', menu.id)
-      .eq('active', true);
-
-    if (categoriesError) {
-      this.logger.error(
-        `Error finding categories for menu_id ${menu.id}: ${categoriesError.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener las categorías',
-      );
-    }
-
-    const categoryIds = (categories ?? []).map((category) => category.id);
-
-    if (categoryIds.length === 0) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('product')
-      .select('*')
-      .in('category_id', categoryIds)
-      .eq('active', true)
-      .order('id', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Error finding products for menu_id ${menu.id}: ${error.message}`,
-      );
-
-      if (this.isBadRequestDatabaseError(error)) {
-        throw new BadRequestException('restaurantId inválido');
-      }
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener los productos',
-      );
-    }
-
-    return (data ?? []).map((product) => this.toProductDto(product));
-  }
-
   async createProduct(
     restaurantId: number,
     createProductDto: CreateProductDto,
@@ -362,7 +290,9 @@ export class MenuService {
       throw new NotFoundException('Producto no encontrado');
     }
 
-    if (product.category.menu_id !== menu.id) {
+    const existingProduct = product as ProductWithCategory;
+
+    if (existingProduct.category.menu_id !== menu.id) {
       throw new ForbiddenException(
         'El producto no pertenece a este restaurante',
       );
@@ -372,7 +302,7 @@ export class MenuService {
       .from('product')
       .update({ active: false })
       .eq('id', productId)
-      .eq('category_id', product.category_id)
+      .eq('category_id', existingProduct.category_id)
       .eq('active', true)
       .select('*')
       .maybeSingle();
@@ -452,20 +382,26 @@ export class MenuService {
     }
   }
 
-  private toMenuDto(menu: Menu): MenuDto {
+  public toMenuDto(menu: MenuWithCategories): MenuDto {
     return {
       id: menu.id,
       restaurant_id: menu.restaurant_id,
       name: menu.name,
+      categories: (menu.categories ?? []).map((category) =>
+        this.toCategoryDto(category),
+      ),
     };
   }
 
-  private toCategoryDto(category: Category): CategoryDto {
+  private toCategoryDto(category: CategoryWithProducts): CategoryDto {
     return {
       id: category.id,
       menu_id: category.menu_id,
       name: category.name,
       active: category.active,
+      products: (category.products ?? []).map((product) =>
+        this.toProductDto(product),
+      ),
     };
   }
 
@@ -544,7 +480,9 @@ export class MenuService {
       throw new NotFoundException('Producto no encontrado');
     }
 
-    if (existing.category.menu_id !== menu.id) {
+    const existingProduct = existing as ProductWithCategory;
+
+    if (existingProduct.category.menu_id !== menu.id) {
       throw new ForbiddenException(
         'El producto no pertenece a este restaurante',
       );

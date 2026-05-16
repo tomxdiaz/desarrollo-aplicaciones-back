@@ -8,5 +8,6 @@ import { TableService } from './table.service';
   imports: [SupabaseModule, AuthModule],
   controllers: [TableController],
   providers: [TableService],
+  exports: [TableService],
 })
 export class TableModule {}

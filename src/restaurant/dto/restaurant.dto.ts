@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TableDto } from '../../table/dto/table.dto';
+import { MenuDto } from '../../menu/dto/menu.dto';
 
 export class RestaurantDto {
   @ApiProperty({ example: 1 })
@@ -42,4 +43,10 @@ export class RestaurantDto {
   @ValidateNested({ each: true })
   @Type(() => TableDto)
   tables?: TableDto[];
+
+  @ApiPropertyOptional({ type: () => MenuDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MenuDto)
+  menu?: MenuDto;
 }

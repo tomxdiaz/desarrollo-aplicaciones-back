@@ -1,5 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { ProductDto } from './product.dto';
 
 export class CategoryDto {
   @ApiProperty({ example: 1 })
@@ -19,4 +27,11 @@ export class CategoryDto {
     description: 'Indica si la categoría está activa o no',
   })
   active!: boolean;
+
+  @ApiPropertyOptional({ type: () => ProductDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductDto)
+  products?: ProductDto[];
 }

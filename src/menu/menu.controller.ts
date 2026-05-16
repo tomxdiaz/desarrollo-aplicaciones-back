@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   ParseIntPipe,
   Patch,
@@ -34,6 +33,7 @@ import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { ProductDto } from './dto/product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 
 type AppUser = Tables<'app_user'>;
 
@@ -41,27 +41,6 @@ type AppUser = Tables<'app_user'>;
 @Controller()
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
-
-  @Get('restaurant/:restaurantId/menu')
-  @ApiOperation({ summary: 'Obtener el menú de un restaurante' })
-  @ApiOkResponse({
-    description: 'Menú obtenido correctamente',
-    type: MenuDto,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findMenuByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<MenuDto> {
-    return await this.menuService.findMenuByRestaurantId(restaurantId);
-  }
 
   @Patch('restaurant/:restaurantId/menu')
   @ApiBearerAuth()
@@ -87,36 +66,12 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async updateMenuName(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() updateMenuDto: UpdateMenuDto,
   ): Promise<MenuDto> {
     return await this.menuService.updateMenuName(restaurantId, updateMenuDto);
-  }
-
-  @Get('restaurant/:restaurantId/menu/categories')
-  @ApiOperation({
-    summary: 'Obtener las categorías del menú de un restaurante',
-  })
-  @ApiOkResponse({
-    description: 'Categorías obtenidas correctamente',
-    type: CategoryDto,
-    isArray: true,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findCategoriesByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<CategoryDto[]> {
-    return await this.menuService.findCategoriesByRestaurantId(restaurantId);
   }
 
   @Post('restaurant/:restaurantId/menu/categories')
@@ -145,7 +100,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async createCategory(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @CurrentAppUser appUser: AppUser,
@@ -182,36 +137,12 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async deleteCategory(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('categoryId', ParseIntPipe) categoryId: number,
   ): Promise<void> {
     return await this.menuService.deleteCategory(restaurantId, categoryId);
-  }
-
-  @Get('restaurant/:restaurantId/menu/product')
-  @ApiOperation({
-    summary: 'Obtener todos los productos del menú de un restaurante',
-  })
-  @ApiOkResponse({
-    description: 'Productos obtenidos correctamente',
-    type: ProductDto,
-    isArray: true,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findProductsByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<ProductDto[]> {
-    return await this.menuService.findProductsByRestaurantId(restaurantId);
   }
 
   @Post('restaurant/:restaurantId/menu/product')
@@ -240,7 +171,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async createProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() createProductDto: CreateProductDto,
@@ -275,7 +206,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async updateProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('productId', ParseIntPipe) productId: number,
@@ -314,7 +245,7 @@ export class MenuController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles('ADMIN', 'CASHIER_PLUS')
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
   async deleteProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('productId', ParseIntPipe) productId: number,

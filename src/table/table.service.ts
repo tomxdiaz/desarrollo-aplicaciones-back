@@ -19,30 +19,6 @@ export class TableService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async findAllByRestaurant(restaurantId: number): Promise<TableDto[]> {
-    const supabase = this.supabaseService.getClient();
-
-    await this.ensureRestaurantExists(restaurantId);
-
-    const { data, error } = await supabase
-      .from('restaurant_table')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('id', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Error finding tables for restaurant_id ${restaurantId}: ${error.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener las mesas',
-      );
-    }
-
-    return (data ?? []).map((table) => this.toTableDto(table));
-  }
-
   async create(
     restaurantId: number,
     createTableDto: CreateTableDto,
@@ -200,7 +176,7 @@ export class TableService {
     }
   }
 
-  private toTableDto(table: RestaurantTable): TableDto {
+  public toTableDto(table: RestaurantTable): TableDto {
     return {
       id: table.id,
       restaurant_id: table.restaurant_id,
