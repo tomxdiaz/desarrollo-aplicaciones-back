@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Get,
   BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -30,6 +31,11 @@ import { CreateStaffDto } from './dto/create-staff.dto';
 import { AppUserService } from '../app_user/app_user.service';
 import { StaffDto } from './dto/staff.dto';
 import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
+import { UpdateStaffRoleDto } from './dto/update-staff-role.dto';
+import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
+import type { Tables } from '../supabase/database.types';
+
+type AppUser = Tables<'app_user'>;
 
 @ApiTags('restaurant_staff')
 @Controller('restaurant/:restaurantId/staff')
@@ -129,6 +135,44 @@ export class RestaurantStaffController {
     }
 
     return this.staffService.addStaff(restaurantId, user.id, dto.role);
+  }
+
+  @Patch(':userId/role')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar el rol del personal de un restaurante' })
+  @ApiOkResponse({
+    description: 'Rol del personal actualizado correctamente',
+    type: StaffDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'restaurantId inválido o datos inválidos para actualizar el rol',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes en este restaurante',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante o usuario del staff no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
+  async updateStaffRole(
+    @CurrentAppUser appUser: AppUser,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateStaffRoleDto,
+  ): Promise<StaffDto> {
+    return await this.staffService.updateStaffRole(
+      restaurantId,
+      userId,
+      dto.role,
+      appUser,
+    );
   }
 
   @Delete(':userId')
