@@ -14,8 +14,6 @@ describe('MenuController', () => {
         {
           provide: MenuService,
           useValue: {
-            findMenuByRestaurantId: jest.fn(),
-            findCategoriesByRestaurantId: jest.fn(),
             createCategory: jest.fn(),
             deleteCategory: jest.fn(),
           },

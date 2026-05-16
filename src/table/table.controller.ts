@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   ParseIntPipe,
   Patch,
@@ -34,28 +33,6 @@ import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 @Controller('restaurant/:restaurantId/tables')
 export class TableController {
   constructor(private readonly tableService: TableService) {}
-
-  @Get()
-  @ApiOperation({ summary: 'Obtener todas las mesas para un restaurante' })
-  @ApiOkResponse({
-    description: 'Mesas obtenidas correctamente',
-    type: TableDto,
-    isArray: true,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findAll(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<TableDto[]> {
-    return await this.tableService.findAllByRestaurant(restaurantId);
-  }
 
   @Post()
   @ApiBearerAuth()

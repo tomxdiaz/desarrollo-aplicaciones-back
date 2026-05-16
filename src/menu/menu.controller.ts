@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   Param,
   ParseIntPipe,
   Patch,
@@ -42,27 +41,6 @@ type AppUser = Tables<'app_user'>;
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
-  @Get('restaurant/:restaurantId/menu')
-  @ApiOperation({ summary: 'Obtener el menú de un restaurante' })
-  @ApiOkResponse({
-    description: 'Menú obtenido correctamente',
-    type: MenuDto,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findMenuByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<MenuDto> {
-    return await this.menuService.findMenuByRestaurantId(restaurantId);
-  }
-
   @Patch('restaurant/:restaurantId/menu')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar el nombre del menú de un restaurante' })
@@ -93,30 +71,6 @@ export class MenuController {
     @Body() updateMenuDto: UpdateMenuDto,
   ): Promise<MenuDto> {
     return await this.menuService.updateMenuName(restaurantId, updateMenuDto);
-  }
-
-  @Get('restaurant/:restaurantId/menu/categories')
-  @ApiOperation({
-    summary: 'Obtener las categorías del menú de un restaurante',
-  })
-  @ApiOkResponse({
-    description: 'Categorías obtenidas correctamente',
-    type: CategoryDto,
-    isArray: true,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findCategoriesByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<CategoryDto[]> {
-    return await this.menuService.findCategoriesByRestaurantId(restaurantId);
   }
 
   @Post('restaurant/:restaurantId/menu/categories')
@@ -188,30 +142,6 @@ export class MenuController {
     @Param('categoryId', ParseIntPipe) categoryId: number,
   ): Promise<void> {
     return await this.menuService.deleteCategory(restaurantId, categoryId);
-  }
-
-  @Get('restaurant/:restaurantId/menu/product')
-  @ApiOperation({
-    summary: 'Obtener todos los productos del menú de un restaurante',
-  })
-  @ApiOkResponse({
-    description: 'Productos obtenidos correctamente',
-    type: ProductDto,
-    isArray: true,
-  })
-  @ApiBadRequestResponse({
-    description: 'restaurantId inválido',
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurante o menú no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  async findProductsByRestaurantId(
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<ProductDto[]> {
-    return await this.menuService.findProductsByRestaurantId(restaurantId);
   }
 
   @Post('restaurant/:restaurantId/menu/product')
