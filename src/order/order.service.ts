@@ -45,11 +45,11 @@ export class OrderService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async create(userId: string, dto: CreateOrderDto): Promise<OrderDto> {
+  async create(userId: string, restaurantId: number, dto: CreateOrderDto): Promise<OrderDto> {
     const supabase = this.supabaseService.getAdminClient();
 
-    if (!dto.table_id) {
-      throw new BadRequestException('La mesa es requerida');
+    if (!dto.table_code || restaurantId == null) {
+      throw new BadRequestException('Se requiere table_code y restaurantId');
     }
 
     if (!dto.items?.length) {
@@ -73,12 +73,13 @@ export class OrderService {
     const { data: table, error: tableError } = await supabase
       .from('restaurant_table')
       .select('id, restaurant_id')
-      .eq('id', dto.table_id)
+      .eq('code', dto.table_code)
+      .eq('restaurant_id', restaurantId)
       .maybeSingle();
 
     if (tableError) {
       this.logger.error(
-        `Error finding restaurant_table ${dto.table_id}: ${tableError.message}`,
+        `Error finding restaurant_table code=${dto.table_code} restaurant_id=${restaurantId}: ${tableError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(tableError)) {
@@ -95,8 +96,10 @@ export class OrderService {
     }
 
     const productIds = [...new Set(dto.items.map((i) => i.product_id))];
+    
+    try {
 
-    const { data: products, error: productsError } = await supabase
+      const { data: products, error: productsError } = await supabase
       .from('product')
       .select(
         `
@@ -119,10 +122,16 @@ export class OrderService {
       .in('id', productIds)
       .eq('active', true)
       .eq('category.active', true);
+      
+    } catch (error) {
+      console.error('Unexpected error fetching products for order:', error);
+      
+    }
 
+    /*
     if (productsError) {
       this.logger.error(
-        `Error finding products for order: ${productsError.message}`,
+        `Error finding products for order. productIds=${JSON.stringify(productIds)} restaurant_id=${table.restaurant_id} error=${productsError.message}`,
       );
 
       if (this.isBadRequestDatabaseError(productsError)) {
@@ -133,8 +142,9 @@ export class OrderService {
         'Error inesperado al obtener los productos',
       );
     }
+    */
 
-    const productsForOrder = (products ?? []) as unknown as ProductForOrder[];
+    const productsForOrder = ( []) as unknown as ProductForOrder[];
 
     const productMap = new Map<number, ProductForOrder>(
       productsForOrder.map((product) => [product.id, product]),
@@ -144,8 +154,14 @@ export class OrderService {
       const product = productMap.get(item.product_id);
 
       if (!product) {
+        this.logger.warn(
+          `Requested product id ${item.product_id} not returned from DB. availableProductIds=${JSON.stringify(
+            Array.from(productMap.keys()),
+          )}`,
+        );
+
         throw new NotFoundException(
-          `Producto con id ${item.product_id} no encontrado`,
+          `Producto con id ${item.product_id} no encontrado o no pertenece al restaurante`,
         );
       }
 
@@ -182,7 +198,7 @@ export class OrderService {
       .from('restaurant_order')
       .insert({
         restaurant_id: table.restaurant_id,
-        table_id: dto.table_id,
+        table_id: table.id,
         user_id: userId,
         number: (count ?? 0) + 1,
         status: RestaurantOrderStatus.PENDING,
