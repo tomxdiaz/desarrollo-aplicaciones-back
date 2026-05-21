@@ -11,6 +11,8 @@ import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { TableService } from '../table/table.service';
 import { MenuService } from '../menu/menu.service';
+import { RestaurantStaffService } from './restaurant_staff.service';
+import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 
 type Restaurant = Tables<'restaurant'>;
 
@@ -22,6 +24,7 @@ export class RestaurantService {
     private readonly supabaseService: SupabaseService,
     private readonly tableService: TableService,
     private readonly menuService: MenuService,
+    private readonly restaurantStaffService: RestaurantStaffService,
   ) {}
 
   async findAll(): Promise<RestaurantDto[]> {
@@ -137,6 +140,18 @@ export class RestaurantService {
       );
     }
 
+    if (!data) {
+      throw new InternalServerErrorException(
+        'Error inesperado al crear el restaurante',
+      );
+    }
+
+    await this.restaurantStaffService.addStaff(
+      data.id,
+      ownerId,
+      RestaurantStaffRole.OWNER,
+    );
+
     return this.toRestaurantDto(data);
   }
 
@@ -196,20 +211,14 @@ export class RestaurantService {
   async findMyRestaurants(userId: string): Promise<RestaurantDto[]> {
     const supabase = this.supabaseService.getAdminClient();
 
-    const [
-      { data: owned, error: ownedError },
-      { data: staffRows, error: staffError },
-    ] = await Promise.all([
-      supabase.from('restaurant').select('*').eq('owner_id', userId),
-      supabase
-        .from('restaurant_staff')
-        .select('restaurant_id')
-        .eq('user_id', userId),
-    ]);
+    const { data, error } = await supabase
+      .from('restaurant_staff')
+      .select('restaurant_id')
+      .eq('user_id', userId);
 
-    if (ownedError) {
+    if (error) {
       this.logger.error(
-        `Error finding owned restaurants for user_id ${userId}: ${ownedError.message}`,
+        `Error finding staff restaurants for user_id ${userId}: ${error.message}`,
       );
 
       throw new InternalServerErrorException(
@@ -217,25 +226,15 @@ export class RestaurantService {
       );
     }
 
-    if (staffError) {
-      this.logger.error(
-        `Error finding staff restaurants for user_id ${userId}: ${staffError.message}`,
-      );
-
-      throw new InternalServerErrorException(
-        'Error inesperado al obtener los restaurantes del usuario',
-      );
-    }
-
-    const staffIds = (staffRows ?? []).map((row) => row.restaurant_id);
+    const ids = (data ?? []).map((row) => row.restaurant_id);
 
     let staffRestaurants: Restaurant[] = [];
 
-    if (staffIds.length > 0) {
+    if (ids.length > 0) {
       const { data, error } = await supabase
         .from('restaurant')
         .select('*')
-        .in('id', staffIds);
+        .in('id', ids);
 
       if (error) {
         this.logger.error(
@@ -250,7 +249,7 @@ export class RestaurantService {
       staffRestaurants = data ?? [];
     }
 
-    return [...(owned ?? []), ...staffRestaurants]
+    return staffRestaurants
       .sort((a, b) => a.id - b.id)
       .map((r) => this.toRestaurantDto(r));
   }
