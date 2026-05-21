@@ -1,5 +1,5 @@
 create type public.global_role as enum ('SUPER_USER', 'OWNER', 'USER');
-create type public.restaurant_staff_role as enum ('ADMIN', 'CASHIER_PLUS', 'CASHIER');
+create type public.restaurant_staff_role as enum ('OWNER', 'ADMIN', 'CASHIER_PLUS', 'CASHIER');
 create type public.restaurant_table_status as enum ('FREE', 'OCCUPIED');
 create type public.restaurant_order_status as enum ('PENDING', 'IN_PROCESS', 'DELIVERED', 'CANCELLED');
 

@@ -29,7 +29,7 @@ import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { RestaurantStaffService } from './restaurant_staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { AppUserService } from '../app_user/app_user.service';
-import { StaffDto } from './dto/staff.dto';
+import { RestaurantStaffDto } from './dto/restaurant-staff.dto';
 import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 import { UpdateStaffRoleDto } from './dto/update-staff-role.dto';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
@@ -50,7 +50,7 @@ export class RestaurantStaffController {
   @ApiOperation({ summary: 'Obtener el personal de un restaurante' })
   @ApiOkResponse({
     description: 'Personal del restaurante obtenido correctamente',
-    type: StaffDto,
+    type: RestaurantStaffDto,
     isArray: true,
   })
   @ApiBadRequestResponse({
@@ -72,8 +72,46 @@ export class RestaurantStaffController {
   @RestaurantRoles(RestaurantStaffRole.ADMIN)
   async getStaff(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
-  ): Promise<StaffDto[]> {
+  ): Promise<RestaurantStaffDto[]> {
     return await this.staffService.getStaff(restaurantId);
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Obtener mi informacion como personal de un restaurante',
+  })
+  @ApiOkResponse({
+    description:
+      'Mi informacion como personal del restaurante obtenida correctamente',
+    type: RestaurantStaffDto,
+    isArray: true,
+  })
+  @ApiBadRequestResponse({
+    description: 'restaurantId inválido',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes en este restaurante',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN)
+  async getMyRestaurantStaffInfo(
+    @CurrentAppUser appUser: AppUser,
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+  ): Promise<RestaurantStaffDto> {
+    return await this.staffService.getMyRestaurantStaffInfo(
+      restaurantId,
+      appUser.id,
+    );
   }
 
   @Post()
@@ -142,7 +180,7 @@ export class RestaurantStaffController {
   @ApiOperation({ summary: 'Actualizar el rol del personal de un restaurante' })
   @ApiOkResponse({
     description: 'Rol del personal actualizado correctamente',
-    type: StaffDto,
+    type: RestaurantStaffDto,
   })
   @ApiBadRequestResponse({
     description:
@@ -167,7 +205,7 @@ export class RestaurantStaffController {
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('userId') userId: string,
     @Body() dto: UpdateStaffRoleDto,
-  ): Promise<StaffDto> {
+  ): Promise<RestaurantStaffDto> {
     return await this.staffService.updateStaffRole(
       restaurantId,
       userId,

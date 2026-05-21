@@ -1,6 +1,7 @@
 import type { Enums } from '../../supabase/database.types';
 
 export const RestaurantStaffRole = {
+  OWNER: 'OWNER',
   ADMIN: 'ADMIN',
   CASHIER_PLUS: 'CASHIER_PLUS',
   CASHIER: 'CASHIER',

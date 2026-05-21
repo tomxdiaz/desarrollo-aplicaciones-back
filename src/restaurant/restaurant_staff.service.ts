@@ -7,12 +7,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { StaffDto } from './dto/staff.dto';
 import type { Tables } from '../supabase/database.types';
 import { AppRole } from '../utils/enums/roles';
 import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
+import { RestaurantStaffDto } from './dto/restaurant-staff.dto';
 
 type AppUser = Tables<'app_user'>;
+type RestaurantStaff = Tables<'restaurant_staff'>;
 
 @Injectable()
 export class RestaurantStaffService {
@@ -20,7 +21,7 @@ export class RestaurantStaffService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getStaff(restaurantId: number): Promise<StaffDto[]> {
+  async getStaff(restaurantId: number): Promise<RestaurantStaffDto[]> {
     const client = this.supabase.getAdminClient();
 
     await this.ensureRestaurantExists(restaurantId);
@@ -42,6 +43,40 @@ export class RestaurantStaffService {
     }
 
     return data ?? [];
+  }
+
+  async getMyRestaurantStaffInfo(
+    restaurantId: number,
+    appUserId: string,
+  ): Promise<RestaurantStaffDto> {
+    const client = this.supabase.getAdminClient();
+
+    await this.ensureRestaurantExists(restaurantId);
+
+    const { data, error } = await client
+      .from('restaurant_staff')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('user_id', appUserId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error finding staff for restaurant_id ${restaurantId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el personal del restaurante',
+      );
+    }
+
+    if (!data) {
+      throw new ForbiddenException(
+        'No sos parte del personal de este restaurante',
+      );
+    }
+
+    return this.toRestaurantStaffDto(data);
   }
 
   async addStaff(
@@ -108,7 +143,7 @@ export class RestaurantStaffService {
     userId: string,
     role: RestaurantStaffRole,
     actor: AppUser,
-  ): Promise<StaffDto> {
+  ): Promise<RestaurantStaffDto> {
     const client = this.supabase.getAdminClient();
 
     const ownerId = await this.getRestaurantOwnerId(restaurantId);
@@ -322,6 +357,15 @@ export class RestaurantStaffService {
 
   private isForeignKeyViolation(error: { code?: string }): boolean {
     return error.code === '23503';
+  }
+
+  private toRestaurantStaffDto(staff: RestaurantStaff): RestaurantStaffDto {
+    return {
+      id: staff.id,
+      user_id: staff.user_id,
+      restaurant_id: staff.restaurant_id,
+      role: staff.role,
+    };
   }
 
   private isBadRequestDatabaseError(error: {

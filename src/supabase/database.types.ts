@@ -364,7 +364,7 @@ export type Database = {
         | 'IN_PROCESS'
         | 'DELIVERED'
         | 'CANCELLED';
-      restaurant_staff_role: 'ADMIN' | 'CASHIER_PLUS' | 'CASHIER';
+      restaurant_staff_role: 'OWNER' | 'ADMIN' | 'CASHIER_PLUS' | 'CASHIER';
       restaurant_table_status: 'FREE' | 'OCCUPIED';
     };
     CompositeTypes: {
@@ -506,7 +506,7 @@ export const Constants = {
         'DELIVERED',
         'CANCELLED',
       ],
-      restaurant_staff_role: ['ADMIN', 'CASHIER_PLUS', 'CASHIER'],
+      restaurant_staff_role: ['OWNER', 'ADMIN', 'CASHIER_PLUS', 'CASHIER'],
       restaurant_table_status: ['FREE', 'OCCUPIED'],
     },
   },
