@@ -287,6 +287,33 @@ export class OrderService {
     return (orders ?? []).map((o) => this.toOrderDto(o, o.order_item ?? []));
   }
 
+  async findMineById(userId: string, orderId: number): Promise<OrderDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data: order, error } = await supabase
+      .from('restaurant_order')
+      .select('*, order_item(*)')
+      .eq('user_id', userId)
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Error finding order_id ${orderId} for user_id ${userId}: ${error.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el pedido',
+      );
+    }
+
+    if (!order) {
+      throw new NotFoundException('Pedido no encontrado');
+    }
+
+    return this.toOrderDto(order, order.order_item ?? []);
+  }
+
   async findByRestaurant(restaurantId: number): Promise<OrderDto[]> {
     const supabase = this.supabaseService.getAdminClient();
 
