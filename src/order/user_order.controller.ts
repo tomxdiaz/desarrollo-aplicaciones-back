@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, UseGuards, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiInternalServerErrorResponse,
@@ -66,5 +66,31 @@ export class UserOrderController {
     @Param('orderId', ParseIntPipe) orderId: number,
   ): Promise<OrderDto> {
     return await this.orderService.findMineById(appUser.id, orderId);
+  }
+
+  @Patch(':orderId/cancel')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Cancelar un pedido mío',
+  })
+  @ApiOkResponse({
+    description: 'Pedido cancelado correctamente',
+    type: OrderDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiNotFoundResponse({
+    description: 'Pedido no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard)
+  async cancelMine(
+    @CurrentAppUser appUser: AppUser,
+    @Param('orderId', ParseIntPipe) orderId: number,
+  ): Promise<OrderDto> {
+    return await this.orderService.cancelMine(appUser.id, orderId);
   }
 }

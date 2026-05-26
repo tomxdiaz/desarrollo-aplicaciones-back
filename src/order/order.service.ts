@@ -319,6 +319,14 @@ export class OrderService {
     return this.toOrderDto(order, order.order_item ?? []);
   }
 
+  async cancelMine(userId: string, orderId: number): Promise<OrderDto> {
+    return await this.updateMineStatus(
+      userId,
+      orderId,
+      RestaurantOrderStatus.CANCELLED,
+    );
+  }
+
   async findByRestaurant(restaurantId: number): Promise<OrderDto[]> {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -421,6 +429,100 @@ export class OrderService {
 
     if (!updated) {
       throw new NotFoundException('Pedido no encontrado para este restaurante');
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from('order_item')
+      .select('*')
+      .eq('order_id', orderId);
+
+    if (itemsError) {
+      this.logger.error(
+        `Error finding order items for order_id ${orderId}: ${itemsError.message}`,
+      );
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener los items del pedido',
+      );
+    }
+
+    return this.toOrderDto(updated, items ?? []);
+  }
+
+  private async updateMineStatus(
+    userId: string,
+    orderId: number,
+    newStatus: RestaurantOrderStatus,
+  ): Promise<OrderDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    if (!newStatus) {
+      throw new BadRequestException('El estado del pedido es requerido');
+    }
+
+    if (!Object.values(RestaurantOrderStatus).includes(newStatus)) {
+      throw new BadRequestException('Estado de pedido inválido');
+    }
+
+    const { data: order, error: orderError } = await supabase
+      .from('restaurant_order')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (orderError) {
+      this.logger.error(
+        `Error finding order_id ${orderId} for user_id ${userId}: ${orderError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(orderError)) {
+        throw new BadRequestException('orderId inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al obtener el pedido',
+      );
+    }
+
+    if (!order) {
+      throw new NotFoundException('Pedido no encontrado');
+    }
+
+    const validNext = VALID_TRANSITIONS[order.status];
+
+    if (!validNext.includes(newStatus)) {
+      const options = validNext.length ? validNext.join(', ') : 'none';
+
+      throw new BadRequestException(
+        `No se puede cambiar el estado de ${order.status} a ${newStatus}. Estados válidos siguientes: ${options}`,
+      );
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('restaurant_order')
+      .update({ status: newStatus })
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+
+    if (updateError) {
+      this.logger.error(
+        `Error updating status for order_id ${orderId} and user_id ${userId}: ${updateError.message}`,
+      );
+
+      if (this.isBadRequestDatabaseError(updateError)) {
+        throw new BadRequestException('Estado de pedido inválido');
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el estado del pedido',
+      );
+    }
+
+    if (!updated) {
+      throw new NotFoundException('Pedido no encontrado');
     }
 
     const { data: items, error: itemsError } = await supabase
