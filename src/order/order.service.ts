@@ -13,6 +13,7 @@ import { RestaurantOrderStatus } from '../utils/enums/restaurant-order-status';
 
 type RestaurantOrder = Tables<'restaurant_order'>;
 type OrderItem = Tables<'order_item'>;
+type Restaurant = Tables<'restaurant'>;
 type Product = Tables<'product'>;
 
 type ProductForOrder = Pick<
@@ -270,7 +271,9 @@ export class OrderService {
 
     const { data: orders, error } = await supabase
       .from('restaurant_order')
-      .select('*, order_item(*)')
+      .select(
+        '*, order_item(*), restaurant(id, name, owner_id, description, address)',
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -284,7 +287,9 @@ export class OrderService {
       );
     }
 
-    return (orders ?? []).map((o) => this.toOrderDto(o, o.order_item ?? []));
+    return (orders ?? []).map((o) =>
+      this.toOrderDto(o, o.order_item ?? [], o.restaurant ?? undefined),
+    );
   }
 
   async findByRestaurant(restaurantId: number): Promise<OrderDto[]> {
@@ -437,7 +442,11 @@ export class OrderService {
     }
   }
 
-  private toOrderDto(order: RestaurantOrder, items: OrderItem[]): OrderDto {
+  private toOrderDto(
+    order: RestaurantOrder,
+    items: OrderItem[],
+    restaurant?: Restaurant,
+  ): OrderDto {
     return {
       id: order.id,
       restaurant_id: order.restaurant_id,
@@ -460,7 +469,18 @@ export class OrderService {
         quantity: i.quantity,
         subtotal: i.subtotal,
       })),
+      ...(restaurant ? { restaurant: this.toRestaurantDto(restaurant) } : {}),
       note: order.note,
+    };
+  }
+
+  private toRestaurantDto(restaurant: Restaurant): OrderDto['restaurant'] {
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      owner_id: restaurant.owner_id,
+      description: restaurant.description,
+      address: restaurant.address,
     };
   }
 

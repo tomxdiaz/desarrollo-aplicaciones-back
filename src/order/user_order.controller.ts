@@ -1,18 +1,7 @@
+import { Controller, UseGuards, Get } from '@nestjs/common';
 import {
-  Controller,
-  Post,
-  UseGuards,
-  Body,
-  Get,
-  Param,
-  ParseIntPipe,
-} from '@nestjs/common';
-import {
-  ApiBadRequestResponse,
   ApiBearerAuth,
-  ApiCreatedResponse,
   ApiInternalServerErrorResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -20,7 +9,6 @@ import {
 } from '@nestjs/swagger';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderDto } from './dto/order.dto';
 import { OrderService } from './order.service';
 import { Tables } from '../supabase/database.types';
@@ -28,40 +16,9 @@ import { Tables } from '../supabase/database.types';
 type AppUser = Tables<'app_user'>;
 
 @ApiTags('orders')
-@Controller('restaurants/:restaurantId/orders')
+@Controller('orders')
 export class UserOrderController {
   constructor(private readonly orderService: OrderService) {}
-
-  @Post()
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Crear un nuevo pedido',
-  })
-  @ApiCreatedResponse({
-    description: 'Pedido creado correctamente',
-    type: OrderDto,
-  })
-  @ApiBadRequestResponse({
-    description: 'Datos inválidos para crear el pedido',
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Token inválido, expirado o no enviado',
-  })
-  @ApiNotFoundResponse({
-    description:
-      'Restaurante, mesa, producto o usuario relacionado no encontrado',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'Error inesperado del servidor',
-  })
-  @UseGuards(SupabaseAuthGuard)
-  async create(
-    @CurrentAppUser appUser: AppUser,
-    @Param('restaurantId', ParseIntPipe) restaurantId: number,
-    @Body() dto: CreateOrderDto,
-  ): Promise<OrderDto> {
-    return await this.orderService.create(appUser.id, restaurantId, dto);
-  }
 
   @Get('mine')
   @ApiBearerAuth()
