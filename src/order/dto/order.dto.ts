@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { RestaurantOrderStatus } from '../../utils/enums/restaurant-order-status';
+import { RestaurantDto } from '../../restaurant/dto/restaurant.dto';
 import { OrderItemDto } from './order-item.dto';
 
 export class OrderDto {
@@ -42,6 +43,10 @@ export class OrderDto {
   @ApiPropertyOptional({ type: [OrderItemDto] })
   @IsOptional()
   items?: OrderItemDto[];
+
+  @ApiPropertyOptional({ type: () => RestaurantDto })
+  @IsOptional()
+  restaurant?: RestaurantDto;
 
   @ApiPropertyOptional({ example: 'Sin cebolla por favor', nullable: true })
   @IsOptional()
