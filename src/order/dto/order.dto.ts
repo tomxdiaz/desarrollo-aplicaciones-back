@@ -51,5 +51,5 @@ export class OrderDto {
   @ApiPropertyOptional({ example: 'Sin cebolla por favor', nullable: true })
   @IsOptional()
   @IsString()
-  note!: string | null;
+  note?: string | null;
 }

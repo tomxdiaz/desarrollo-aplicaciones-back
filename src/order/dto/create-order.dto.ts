@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
@@ -22,8 +22,8 @@ export class CreateOrderDto {
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
 
-  @ApiProperty({ example: 'Sin cebolla por favor' })
+  @ApiPropertyOptional({ example: 'Sin cebolla por favor', nullable: true })
   @IsOptional()
   @IsString()
-  note!: string | null;
+  note?: string | null;
 }
