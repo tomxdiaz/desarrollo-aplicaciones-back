@@ -17,10 +17,9 @@ export class OrderDto {
   @IsInt()
   table_id!: number;
 
-  @ApiPropertyOptional({ example: 'uuid-here', nullable: true })
-  @IsOptional()
+  @ApiPropertyOptional({ example: 'uuid-here' })
   @IsString()
-  user_id!: string | null;
+  user_id!: string;
 
   @ApiProperty({ example: 5 })
   @IsInt()

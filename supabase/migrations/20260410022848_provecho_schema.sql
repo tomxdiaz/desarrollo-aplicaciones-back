@@ -62,7 +62,7 @@ create table public.restaurant_order (
   id bigint generated always as identity primary key,
   restaurant_id bigint not null references public.restaurant(id) on delete cascade,
   table_id bigint not null references public.restaurant_table(id) on delete restrict,
-  user_id uuid references public.app_user(id) on delete set null,
+  user_id uuid not null references public.app_user(id) on delete restrict,
   number integer not null,
   created_at timestamptz not null default now(),
   status public.restaurant_order_status not null default 'PENDING',
