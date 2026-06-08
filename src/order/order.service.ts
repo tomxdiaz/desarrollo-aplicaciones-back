@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -10,6 +11,7 @@ import type { Tables } from '../supabase/database.types';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderDto } from './dto/order.dto';
 import { RestaurantOrderStatus } from '../utils/enums/restaurant-order-status';
+import { RestaurantTableStatus } from '../utils/enums/restaurant-table-status';
 
 type RestaurantOrder = Tables<'restaurant_order'>;
 type OrderItem = Tables<'order_item'>;
@@ -77,7 +79,7 @@ export class OrderService {
 
     const { data: table, error: tableError } = await supabase
       .from('restaurant_table')
-      .select('id, restaurant_id')
+      .select('id, restaurant_id, status')
       .eq('code', dto.table_code)
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
@@ -98,6 +100,12 @@ export class OrderService {
 
     if (!table) {
       throw new NotFoundException('Mesa no encontrada');
+    }
+
+    if (table.status === RestaurantTableStatus.OCCUPIED) {
+      throw new ConflictException(
+        'La mesa está ocupada. No se puede crear un pedido hasta que esté libre',
+      );
     }
 
     const productIds = [...new Set(dto.items.map((i) => i.product_id))];
@@ -260,6 +268,21 @@ export class OrderService {
 
       throw new InternalServerErrorException(
         'Error inesperado al crear los items del pedido',
+      );
+    }
+
+    const { error: tableStatusError } = await supabase
+      .from('restaurant_table')
+      .update({ status: RestaurantTableStatus.OCCUPIED })
+      .eq('id', table.id)
+      .eq('restaurant_id', table.restaurant_id);
+
+    if (tableStatusError) {
+      // The order was already created successfully, so we don't fail the
+      // request if marking the table as occupied fails. The table status can
+      // still be changed manually afterwards.
+      this.logger.error(
+        `Error marking table_id ${table.id} as OCCUPIED for order_id ${order.id}: ${tableStatusError.message}`,
       );
     }
 
