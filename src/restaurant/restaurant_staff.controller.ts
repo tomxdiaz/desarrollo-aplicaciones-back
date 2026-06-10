@@ -103,7 +103,11 @@ export class RestaurantStaffController {
     description: 'Error inesperado del servidor',
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
-  @RestaurantRoles(RestaurantStaffRole.ADMIN)
+  @RestaurantRoles(
+    RestaurantStaffRole.ADMIN,
+    RestaurantStaffRole.CASHIER_PLUS,
+    RestaurantStaffRole.CASHIER,
+  )
   async getMyRestaurantStaffInfo(
     @CurrentAppUser appUser: AppUser,
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
