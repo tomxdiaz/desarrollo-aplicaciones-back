@@ -43,7 +43,7 @@ export class AppUserService {
   }
 
   async findAll(): Promise<AppUserDto[]> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('app_user')
@@ -86,7 +86,7 @@ export class AppUserService {
   async updateGlobalRole(
     updateGlobalRoleDto: UpdateGlobalRoleDto,
   ): Promise<AppUserDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getAdminClient();
 
     if (!updateGlobalRoleDto.appUserId) {
       throw new BadRequestException('El id del usuario es requerido');

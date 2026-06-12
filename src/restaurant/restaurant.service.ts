@@ -28,7 +28,7 @@ export class RestaurantService {
   ) {}
 
   async findAll(): Promise<RestaurantDto[]> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('restaurant')
@@ -156,7 +156,7 @@ export class RestaurantService {
   }
 
   async findOne(id: number): Promise<RestaurantDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('restaurant')
