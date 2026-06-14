@@ -332,11 +332,6 @@ export class MenuService {
     return this.toProductDto(data);
   }
 
-    if (!deletedCategory) {
-      throw new NotFoundException('Categoría no encontrada');
-    }
-  }
-
   private async getMenuByRestaurantIdOrThrow(
     restaurantId: number,
   ): Promise<Menu> {

@@ -4,494 +4,497 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export type Database = {
   graphql_public: {
     Tables: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       app_user: {
         Row: {
-          email: string
-          global_role: Database["public"]["Enums"]["global_role"]
-          id: string
-        }
+          email: string;
+          global_role: Database['public']['Enums']['global_role'];
+          id: string;
+        };
         Insert: {
-          email: string
-          global_role?: Database["public"]["Enums"]["global_role"]
-          id: string
-        }
+          email: string;
+          global_role?: Database['public']['Enums']['global_role'];
+          id: string;
+        };
         Update: {
-          email?: string
-          global_role?: Database["public"]["Enums"]["global_role"]
-          id?: string
-        }
-        Relationships: []
-      }
+          email?: string;
+          global_role?: Database['public']['Enums']['global_role'];
+          id?: string;
+        };
+        Relationships: [];
+      };
       category: {
         Row: {
-          active: boolean
-          id: number
-          menu_id: number
-          name: string
-        }
+          active: boolean;
+          id: number;
+          menu_id: number;
+          name: string;
+        };
         Insert: {
-          active?: boolean
-          id?: never
-          menu_id: number
-          name: string
-        }
+          active?: boolean;
+          id?: never;
+          menu_id: number;
+          name: string;
+        };
         Update: {
-          active?: boolean
-          id?: never
-          menu_id?: number
-          name?: string
-        }
+          active?: boolean;
+          id?: never;
+          menu_id?: number;
+          name?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "category_menu_id_fkey"
-            columns: ["menu_id"]
-            isOneToOne: false
-            referencedRelation: "menu"
-            referencedColumns: ["id"]
+            foreignKeyName: 'category_menu_id_fkey';
+            columns: ['menu_id'];
+            isOneToOne: false;
+            referencedRelation: 'menu';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       menu: {
         Row: {
-          id: number
-          name: string | null
-          restaurant_id: number
-        }
+          id: number;
+          name: string | null;
+          restaurant_id: number;
+        };
         Insert: {
-          id?: never
-          name?: string | null
-          restaurant_id: number
-        }
+          id?: never;
+          name?: string | null;
+          restaurant_id: number;
+        };
         Update: {
-          id?: never
-          name?: string | null
-          restaurant_id?: number
-        }
+          id?: never;
+          name?: string | null;
+          restaurant_id?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "menu_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: true
-            referencedRelation: "restaurant"
-            referencedColumns: ["id"]
+            foreignKeyName: 'menu_restaurant_id_fkey';
+            columns: ['restaurant_id'];
+            isOneToOne: true;
+            referencedRelation: 'restaurant';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       order_item: {
         Row: {
-          id: number
-          order_id: number
-          product_description: string | null
-          product_id: number | null
-          product_image: string | null
-          product_name: string
-          quantity: number
-          subtotal: number
-          unit_price: number
-        }
+          id: number;
+          order_id: number;
+          product_description: string | null;
+          product_id: number | null;
+          product_image: string | null;
+          product_name: string;
+          quantity: number;
+          subtotal: number;
+          unit_price: number;
+        };
         Insert: {
-          id?: never
-          order_id: number
-          product_description?: string | null
-          product_id?: number | null
-          product_image?: string | null
-          product_name: string
-          quantity: number
-          subtotal: number
-          unit_price: number
-        }
+          id?: never;
+          order_id: number;
+          product_description?: string | null;
+          product_id?: number | null;
+          product_image?: string | null;
+          product_name: string;
+          quantity: number;
+          subtotal: number;
+          unit_price: number;
+        };
         Update: {
-          id?: never
-          order_id?: number
-          product_description?: string | null
-          product_id?: number | null
-          product_image?: string | null
-          product_name?: string
-          quantity?: number
-          subtotal?: number
-          unit_price?: number
-        }
+          id?: never;
+          order_id?: number;
+          product_description?: string | null;
+          product_id?: number | null;
+          product_image?: string | null;
+          product_name?: string;
+          quantity?: number;
+          subtotal?: number;
+          unit_price?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "order_item_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_order"
-            referencedColumns: ["id"]
+            foreignKeyName: 'order_item_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'restaurant_order';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       product: {
         Row: {
-          active: boolean
-          category_id: number
-          description: string | null
-          id: number
-          image: string | null
-          name: string
-          price: number
-        }
+          active: boolean;
+          category_id: number;
+          description: string | null;
+          id: number;
+          image: string | null;
+          name: string;
+          price: number;
+        };
         Insert: {
-          active?: boolean
-          category_id: number
-          description?: string | null
-          id?: never
-          image?: string | null
-          name: string
-          price: number
-        }
+          active?: boolean;
+          category_id: number;
+          description?: string | null;
+          id?: never;
+          image?: string | null;
+          name: string;
+          price: number;
+        };
         Update: {
-          active?: boolean
-          category_id?: number
-          description?: string | null
-          id?: never
-          image?: string | null
-          name?: string
-          price?: number
-        }
+          active?: boolean;
+          category_id?: number;
+          description?: string | null;
+          id?: never;
+          image?: string | null;
+          name?: string;
+          price?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "product_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "category"
-            referencedColumns: ["id"]
+            foreignKeyName: 'product_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'category';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       restaurant: {
         Row: {
-          address: string | null
-          description: string | null
-          id: number
-          image: string | null
-          name: string
-          owner_id: string
-        }
+          address: string | null;
+          description: string | null;
+          id: number;
+          image: string | null;
+          name: string;
+          owner_id: string;
+        };
         Insert: {
-          address?: string | null
-          description?: string | null
-          id?: never
-          image?: string | null
-          name: string
-          owner_id: string
-        }
+          address?: string | null;
+          description?: string | null;
+          id?: never;
+          image?: string | null;
+          name: string;
+          owner_id: string;
+        };
         Update: {
-          address?: string | null
-          description?: string | null
-          id?: never
-          image?: string | null
-          name?: string
-          owner_id?: string
-        }
+          address?: string | null;
+          description?: string | null;
+          id?: never;
+          image?: string | null;
+          name?: string;
+          owner_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "restaurant_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "app_user"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       restaurant_order: {
         Row: {
-          created_at: string
-          id: number
-          note: string | null
-          number: number
-          restaurant_id: number
-          status: Database["public"]["Enums"]["restaurant_order_status"]
-          table_id: number
-          total: number
-          user_id: string
-        }
+          created_at: string;
+          id: number;
+          note: string | null;
+          number: number;
+          restaurant_id: number;
+          status: Database['public']['Enums']['restaurant_order_status'];
+          table_id: number;
+          total: number;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: never
-          note?: string | null
-          number: number
-          restaurant_id: number
-          status?: Database["public"]["Enums"]["restaurant_order_status"]
-          table_id: number
-          total?: number
-          user_id: string
-        }
+          created_at?: string;
+          id?: never;
+          note?: string | null;
+          number: number;
+          restaurant_id: number;
+          status?: Database['public']['Enums']['restaurant_order_status'];
+          table_id: number;
+          total?: number;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: never
-          note?: string | null
-          number?: number
-          restaurant_id?: number
-          status?: Database["public"]["Enums"]["restaurant_order_status"]
-          table_id?: number
-          total?: number
-          user_id?: string
-        }
+          created_at?: string;
+          id?: never;
+          note?: string | null;
+          number?: number;
+          restaurant_id?: number;
+          status?: Database['public']['Enums']['restaurant_order_status'];
+          table_id?: number;
+          total?: number;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "restaurant_order_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_order_restaurant_id_fkey';
+            columns: ['restaurant_id'];
+            isOneToOne: false;
+            referencedRelation: 'restaurant';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "restaurant_order_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_table"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_order_table_id_fkey';
+            columns: ['table_id'];
+            isOneToOne: false;
+            referencedRelation: 'restaurant_table';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "restaurant_order_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "app_user"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_order_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       restaurant_staff: {
         Row: {
-          id: number
-          restaurant_id: number
-          role: Database["public"]["Enums"]["restaurant_staff_role"]
-          user_id: string
-        }
+          id: number;
+          restaurant_id: number;
+          role: Database['public']['Enums']['restaurant_staff_role'];
+          user_id: string;
+        };
         Insert: {
-          id?: never
-          restaurant_id: number
-          role: Database["public"]["Enums"]["restaurant_staff_role"]
-          user_id: string
-        }
+          id?: never;
+          restaurant_id: number;
+          role: Database['public']['Enums']['restaurant_staff_role'];
+          user_id: string;
+        };
         Update: {
-          id?: never
-          restaurant_id?: number
-          role?: Database["public"]["Enums"]["restaurant_staff_role"]
-          user_id?: string
-        }
+          id?: never;
+          restaurant_id?: number;
+          role?: Database['public']['Enums']['restaurant_staff_role'];
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "restaurant_staff_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_staff_restaurant_id_fkey';
+            columns: ['restaurant_id'];
+            isOneToOne: false;
+            referencedRelation: 'restaurant';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "restaurant_staff_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "app_user"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_staff_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'app_user';
+            referencedColumns: ['id'];
           },
-        ]
-      }
+        ];
+      };
       restaurant_table: {
         Row: {
-          area: string | null
-          capacity: number
-          code: string
-          id: number
-          restaurant_id: number
-          status: Database["public"]["Enums"]["restaurant_table_status"]
-        }
+          area: string | null;
+          capacity: number;
+          code: string;
+          id: number;
+          restaurant_id: number;
+          status: Database['public']['Enums']['restaurant_table_status'];
+        };
         Insert: {
-          area?: string | null
-          capacity: number
-          code: string
-          id?: never
-          restaurant_id: number
-          status?: Database["public"]["Enums"]["restaurant_table_status"]
-        }
+          area?: string | null;
+          capacity: number;
+          code: string;
+          id?: never;
+          restaurant_id: number;
+          status?: Database['public']['Enums']['restaurant_table_status'];
+        };
         Update: {
-          area?: string | null
-          capacity?: number
-          code?: string
-          id?: never
-          restaurant_id?: number
-          status?: Database["public"]["Enums"]["restaurant_table_status"]
-        }
+          area?: string | null;
+          capacity?: number;
+          code?: string;
+          id?: never;
+          restaurant_id?: number;
+          status?: Database['public']['Enums']['restaurant_table_status'];
+        };
         Relationships: [
           {
-            foreignKeyName: "restaurant_table_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant"
-            referencedColumns: ["id"]
+            foreignKeyName: 'restaurant_table_restaurant_id_fkey';
+            columns: ['restaurant_id'];
+            isOneToOne: false;
+            referencedRelation: 'restaurant';
+            referencedColumns: ['id'];
           },
-        ]
-      }
-    }
+        ];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      global_role: "SUPER_USER" | "OWNER" | "USER"
+      global_role: 'SUPER_USER' | 'OWNER' | 'USER';
       restaurant_order_status:
-        | "PENDING"
-        | "IN_PROCESS"
-        | "DELIVERED"
-        | "CANCELLED"
-      restaurant_staff_role: "OWNER" | "ADMIN" | "CASHIER_PLUS" | "CASHIER"
-      restaurant_table_status: "FREE" | "OCCUPIED"
-    }
+        | 'PENDING'
+        | 'IN_PROCESS'
+        | 'DELIVERED'
+        | 'CANCELLED';
+      restaurant_staff_role: 'OWNER' | 'ADMIN' | 'CASHIER_PLUS' | 'CASHIER';
+      restaurant_table_status: 'FREE' | 'OCCUPIED';
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  'public'
+>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I;
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U;
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never;
 
 export const Constants = {
   graphql_public: {
@@ -499,16 +502,15 @@ export const Constants = {
   },
   public: {
     Enums: {
-      global_role: ["SUPER_USER", "OWNER", "USER"],
+      global_role: ['SUPER_USER', 'OWNER', 'USER'],
       restaurant_order_status: [
-        "PENDING",
-        "IN_PROCESS",
-        "DELIVERED",
-        "CANCELLED",
+        'PENDING',
+        'IN_PROCESS',
+        'DELIVERED',
+        'CANCELLED',
       ],
-      restaurant_staff_role: ["OWNER", "ADMIN", "CASHIER_PLUS", "CASHIER"],
-      restaurant_table_status: ["FREE", "OCCUPIED"],
+      restaurant_staff_role: ['OWNER', 'ADMIN', 'CASHIER_PLUS', 'CASHIER'],
+      restaurant_table_status: ['FREE', 'OCCUPIED'],
     },
   },
-} as const
-
+} as const;
