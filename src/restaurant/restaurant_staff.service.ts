@@ -13,7 +13,6 @@ import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
 import { RestaurantStaffDto } from './dto/restaurant-staff.dto';
 
 type AppUser = Tables<'app_user'>;
-type RestaurantStaff = Tables<'restaurant_staff'>;
 
 @Injectable()
 export class RestaurantStaffService {
@@ -28,7 +27,7 @@ export class RestaurantStaffService {
 
     const { data, error } = await client
       .from('restaurant_staff')
-      .select('*')
+      .select('*, app_user(id, email, global_role)')
       .eq('restaurant_id', restaurantId)
       .order('id', { ascending: true });
 
@@ -42,7 +41,7 @@ export class RestaurantStaffService {
       );
     }
 
-    return data ?? [];
+    return (data ?? []) as unknown as RestaurantStaffDto[];
   }
 
   async getMyRestaurantStaffInfo(
@@ -55,7 +54,7 @@ export class RestaurantStaffService {
 
     const { data, error } = await client
       .from('restaurant_staff')
-      .select('*')
+      .select('*, app_user(id, email, global_role)')
       .eq('restaurant_id', restaurantId)
       .eq('user_id', appUserId)
       .maybeSingle();
@@ -76,7 +75,7 @@ export class RestaurantStaffService {
       );
     }
 
-    return this.toRestaurantStaffDto(data);
+    return data as unknown as RestaurantStaffDto;
   }
 
   async addStaff(
@@ -212,7 +211,7 @@ export class RestaurantStaffService {
       .update({ role })
       .eq('restaurant_id', restaurantId)
       .eq('user_id', userId)
-      .select('*')
+      .select('*, app_user(id, email, global_role)')
       .maybeSingle();
 
     if (error) {
@@ -237,7 +236,7 @@ export class RestaurantStaffService {
       );
     }
 
-    return data;
+    return data as unknown as RestaurantStaffDto;
   }
 
   async removeStaff(restaurantId: number, userId: string) {
@@ -357,15 +356,6 @@ export class RestaurantStaffService {
 
   private isForeignKeyViolation(error: { code?: string }): boolean {
     return error.code === '23503';
-  }
-
-  private toRestaurantStaffDto(staff: RestaurantStaff): RestaurantStaffDto {
-    return {
-      id: staff.id,
-      user_id: staff.user_id,
-      restaurant_id: staff.restaurant_id,
-      role: staff.role,
-    };
   }
 
   private isBadRequestDatabaseError(error: {
