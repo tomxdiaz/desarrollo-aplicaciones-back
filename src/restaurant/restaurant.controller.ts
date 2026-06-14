@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
   Param,
@@ -21,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { CurrentAppUser } from '../auth/decorators/current-app-user.decorator';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -28,6 +30,8 @@ import { Tables } from '../supabase/database.types';
 import { AppRole } from '../utils/enums/roles';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
+import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
 
 type AppUser = Tables<'app_user'>;
 
@@ -118,5 +122,36 @@ export class RestaurantController {
     @Body() createRestaurantDto: CreateRestaurantDto,
   ): Promise<RestaurantDto> {
     return await this.restaurantService.create(createRestaurantDto, appUser.id);
+  }
+
+  @Patch(':restaurantId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar información de un restaurante' })
+  @ApiOkResponse({
+    description: 'Restaurante actualizado correctamente',
+    type: RestaurantDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Datos inválidos para actualizar el restaurante',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description: 'El usuario no tiene permisos suficientes',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante no encontrado',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @RestaurantRoles('ADMIN')
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  async update(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Body() updateRestaurantDto: UpdateRestaurantDto,
+  ): Promise<RestaurantDto> {
+    return await this.restaurantService.update(restaurantId, updateRestaurantDto);
   }
 }

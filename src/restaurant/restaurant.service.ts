@@ -8,6 +8,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import type { Tables } from '../supabase/database.types';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { TableService } from '../table/table.service';
 import { MenuService } from '../menu/menu.service';
@@ -252,6 +253,41 @@ export class RestaurantService {
     return staffRestaurants
       .sort((a, b) => a.id - b.id)
       .map((r) => this.toRestaurantDto(r));
+  }
+
+  async update(id: number, dto: UpdateRestaurantDto): Promise<RestaurantDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('restaurant')
+      .update({
+        name: dto.name,
+        description: dto.description ?? null,
+        address: dto.address ?? null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Error updating restaurant ${id}: ${error.message}`);
+
+      if (this.isBadRequestDatabaseError(error)) {
+        throw new BadRequestException(
+          'Datos inválidos para actualizar el restaurante',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error inesperado al actualizar el restaurante',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('Restaurante no encontrado');
+    }
+
+    return this.toRestaurantDto(data);
   }
 
   private toRestaurantDto(restaurant: Restaurant): RestaurantDto {
