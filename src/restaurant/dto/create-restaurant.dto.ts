@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class CreateRestaurantDto {
   @ApiProperty({ example: 'La Esquina' })
@@ -16,4 +16,21 @@ export class CreateRestaurantDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Archivo de imagen a subir (multipart)',
+  })
+  @IsOptional()
+  image?: unknown;
+
+  @ApiPropertyOptional({
+    type: String,
+    example: 'https://example.com/images/restaurant.jpg',
+    description: 'URL de una imagen ya existente que se quiere conservar',
+  })
+  @IsOptional()
+  @IsUrl()
+  existingImage?: string;
 }

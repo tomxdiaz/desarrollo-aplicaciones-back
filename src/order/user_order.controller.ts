@@ -1,4 +1,11 @@
-import { Controller, UseGuards, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
+import {
+  Controller,
+  UseGuards,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiInternalServerErrorResponse,

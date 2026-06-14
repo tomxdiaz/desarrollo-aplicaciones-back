@@ -5,12 +5,17 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
   Param,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
@@ -32,8 +37,26 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RestaurantRoles } from '../auth/decorators/restaurant-roles.decorator';
 import { RestaurantRolesGuard } from '../auth/guards/restaurant-roles.guard';
+import type { UploadedImage } from '../supabase/supabase.service';
 
 type AppUser = Tables<'app_user'>;
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const imageInterceptorOptions = {
+  limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+  fileFilter: (
+    _req: unknown,
+    file: { mimetype: string },
+    cb: (error: Error | null, accept: boolean) => void,
+  ) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+  },
+};
 
 @ApiTags('restaurant')
 @Controller('restaurant')
@@ -99,6 +122,8 @@ export class RestaurantController {
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo restaurante' })
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateRestaurantDto })
   @ApiCreatedResponse({
     description: 'Restaurante creado correctamente',
     type: RestaurantDto,
@@ -117,15 +142,23 @@ export class RestaurantController {
   })
   @Roles(AppRole.SUPER_USER, AppRole.OWNER)
   @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor('image', imageInterceptorOptions))
   async create(
     @CurrentAppUser appUser: AppUser,
     @Body() createRestaurantDto: CreateRestaurantDto,
+    @UploadedFile() image?: UploadedImage,
   ): Promise<RestaurantDto> {
-    return await this.restaurantService.create(createRestaurantDto, appUser.id);
+    return await this.restaurantService.create(
+      createRestaurantDto,
+      appUser.id,
+      image,
+    );
   }
 
   @Patch(':restaurantId')
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateRestaurantDto })
   @ApiOperation({ summary: 'Actualizar información de un restaurante' })
   @ApiOkResponse({
     description: 'Restaurante actualizado correctamente',
@@ -148,10 +181,16 @@ export class RestaurantController {
   })
   @RestaurantRoles('ADMIN')
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @UseInterceptors(FileInterceptor('image', imageInterceptorOptions))
   async update(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() updateRestaurantDto: UpdateRestaurantDto,
+    @UploadedFile() image?: UploadedImage,
   ): Promise<RestaurantDto> {
-    return await this.restaurantService.update(restaurantId, updateRestaurantDto);
+    return await this.restaurantService.update(
+      restaurantId,
+      updateRestaurantDto,
+      image,
+    );
   }
 }

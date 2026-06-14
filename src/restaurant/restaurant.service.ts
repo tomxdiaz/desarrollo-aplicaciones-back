@@ -6,7 +6,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import type { Tables } from '../supabase/database.types';
+import type { UploadedImage } from '../supabase/supabase.service';
+import type { Tables, TablesUpdate } from '../supabase/database.types';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { RestaurantDto } from './dto/restaurant.dto';
@@ -75,6 +76,7 @@ export class RestaurantService {
   async create(
     createRestaurantDto: CreateRestaurantDto,
     ownerId: string,
+    image?: UploadedImage,
   ): Promise<RestaurantDto> {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -110,6 +112,12 @@ export class RestaurantService {
       );
     }
 
+    const uploadedUrl = await this.supabaseService.uploadImage(
+      image,
+      `owner-${ownerId}`,
+    );
+    const imageUrl = uploadedUrl ?? createRestaurantDto.existingImage ?? null;
+
     const { data, error } = await supabase
       .from('restaurant')
       .insert({
@@ -117,6 +125,7 @@ export class RestaurantService {
         owner_id: ownerId,
         description: createRestaurantDto.description ?? null,
         address: createRestaurantDto.address ?? null,
+        image: imageUrl,
       })
       .select()
       .single();
@@ -255,16 +264,32 @@ export class RestaurantService {
       .map((r) => this.toRestaurantDto(r));
   }
 
-  async update(id: number, dto: UpdateRestaurantDto): Promise<RestaurantDto> {
+  async update(
+    id: number,
+    dto: UpdateRestaurantDto,
+    image?: UploadedImage,
+  ): Promise<RestaurantDto> {
     const supabase = this.supabaseService.getAdminClient();
+
+    const updates: TablesUpdate<'restaurant'> = {
+      name: dto.name,
+      description: dto.description ?? null,
+      address: dto.address ?? null,
+    };
+
+    // Only touch the image if the client sent a new file or an explicit URL to
+    // keep. Otherwise leave the existing image untouched.
+    if (image || dto.existingImage !== undefined) {
+      const uploadedUrl = await this.supabaseService.uploadImage(
+        image,
+        `restaurant-${id}`,
+      );
+      updates.image = uploadedUrl ?? dto.existingImage ?? null;
+    }
 
     const { data, error } = await supabase
       .from('restaurant')
-      .update({
-        name: dto.name,
-        description: dto.description ?? null,
-        address: dto.address ?? null,
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
@@ -297,6 +322,7 @@ export class RestaurantService {
       owner_id: restaurant.owner_id,
       description: restaurant.description,
       address: restaurant.address,
+      image: restaurant.image,
     };
   }
 

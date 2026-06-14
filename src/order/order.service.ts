@@ -295,7 +295,7 @@ export class OrderService {
     const { data: orders, error } = await supabase
       .from('restaurant_order')
       .select(
-        '*, order_item(*), restaurant(id, name, owner_id, description, address)',
+        '*, order_item(*), restaurant(id, name, owner_id, description, address, image)',
       )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -633,6 +633,7 @@ export class OrderService {
       owner_id: restaurant.owner_id,
       description: restaurant.description,
       address: restaurant.address,
+      image: restaurant.image,
     };
   }
 

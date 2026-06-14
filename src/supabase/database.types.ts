@@ -194,6 +194,7 @@ export type Database = {
           address: string | null
           description: string | null
           id: number
+          image: string | null
           name: string
           owner_id: string
         }
@@ -201,6 +202,7 @@ export type Database = {
           address?: string | null
           description?: string | null
           id?: never
+          image?: string | null
           name: string
           owner_id: string
         }
@@ -208,6 +210,7 @@ export type Database = {
           address?: string | null
           description?: string | null
           id?: never
+          image?: string | null
           name?: string
           owner_id?: string
         }

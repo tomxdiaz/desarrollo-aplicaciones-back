@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import type { UploadedImage } from '../supabase/supabase.service';
 import type { Tables, TablesUpdate } from '../supabase/database.types';
 import { CategoryDto } from './dto/category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -190,6 +191,7 @@ export class MenuService {
   async createProduct(
     restaurantId: number,
     createProductDto: CreateProductDto,
+    image?: UploadedImage,
   ): Promise<ProductDto> {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -226,6 +228,12 @@ export class MenuService {
       );
     }
 
+    const uploadedUrl = await this.supabaseService.uploadImage(
+      image,
+      `restaurant-${restaurantId}/products`,
+    );
+    const imageUrl = uploadedUrl ?? createProductDto.existingImage ?? null;
+
     const { data, error } = await supabase
       .from('product')
       .insert({
@@ -233,7 +241,7 @@ export class MenuService {
         name: createProductDto.name,
         description: createProductDto.description,
         price: createProductDto.price,
-        image: createProductDto.image,
+        image: imageUrl,
       })
       .select('*')
       .single();
@@ -494,12 +502,15 @@ export class MenuService {
     restaurantId: number,
     productId: number,
     updateProductDto: UpdateProductDto,
+    image?: UploadedImage,
   ): Promise<ProductDto> {
     const supabase = this.supabaseService.getAdminClient();
     const menu = await this.getMenuByRestaurantIdOrThrow(restaurantId);
 
     const patch = this.toProductUpdatePayload(updateProductDto);
-    if (Object.keys(patch).length === 0) {
+    const hasImageChange =
+      !!image || updateProductDto.existingImage !== undefined;
+    if (Object.keys(patch).length === 0 && !hasImageChange) {
       throw new BadRequestException(
         'Debe enviar al menos un campo a actualizar',
       );
@@ -573,6 +584,14 @@ export class MenuService {
       }
     }
 
+    if (hasImageChange) {
+      const uploadedUrl = await this.supabaseService.uploadImage(
+        image,
+        `restaurant-${restaurantId}/products`,
+      );
+      patch.image = uploadedUrl ?? updateProductDto.existingImage ?? null;
+    }
+
     const { data, error } = await supabase
       .from('product')
       .update(patch)
@@ -622,9 +641,6 @@ export class MenuService {
     }
     if (dto.price !== undefined) {
       patch.price = dto.price;
-    }
-    if (dto.image !== undefined) {
-      patch.image = dto.image;
     }
 
     return patch;

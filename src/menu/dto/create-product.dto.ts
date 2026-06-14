@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
@@ -6,6 +7,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsUrl,
   Min,
 } from 'class-validator';
 
@@ -14,6 +16,7 @@ export class CreateProductDto {
     example: 1,
     description: 'ID de la categoría a la que pertenece el producto',
   })
+  @Type(() => Number)
   @IsInt()
   @IsPositive()
   category_id!: number;
@@ -39,15 +42,25 @@ export class CreateProductDto {
     description: 'Precio del producto',
     minimum: 0,
   })
+  @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   price!: number;
 
   @ApiPropertyOptional({
-    example: 'https://example.com/images/hamburguesa.jpg',
-    description: 'URL de la imagen del producto',
+    type: 'string',
+    format: 'binary',
+    description: 'Archivo de imagen a subir (multipart)',
   })
   @IsOptional()
-  @IsString()
-  image?: string;
+  image?: unknown;
+
+  @ApiPropertyOptional({
+    type: String,
+    example: 'https://example.com/images/hamburguesa.jpg',
+    description: 'URL de una imagen ya existente que se quiere conservar',
+  })
+  @IsOptional()
+  @IsUrl()
+  existingImage?: string;
 }

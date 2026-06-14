@@ -37,6 +37,15 @@ export class RestaurantDto {
   @IsString()
   address!: string | null;
 
+  @ApiPropertyOptional({
+    example: 'https://example.com/images/restaurant.jpg',
+    description: 'URL de la imagen del restaurante',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  image!: string | null;
+
   @ApiPropertyOptional({ type: () => TableDto, isArray: true })
   @IsOptional()
   @IsArray()

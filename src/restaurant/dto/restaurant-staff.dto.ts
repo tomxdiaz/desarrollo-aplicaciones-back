@@ -1,11 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RestaurantStaffRole } from '../../utils/enums/restaurant-staff-role';
-import { IsEmail, IsEnum, IsInt, IsString, IsUUID, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { AppRole } from '../../utils/enums/roles';
 
 export class AppUserDto {
-  @ApiProperty({ example: '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a', format: 'uuid' })
+  @ApiProperty({
+    example: '1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a',
+    format: 'uuid',
+  })
   @IsUUID()
   id!: string;
 

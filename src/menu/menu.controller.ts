@@ -6,11 +6,16 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
@@ -34,8 +39,26 @@ import { ProductDto } from './dto/product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { RestaurantStaffRole } from '../utils/enums/restaurant-staff-role';
+import type { UploadedImage } from '../supabase/supabase.service';
 
 type AppUser = Tables<'app_user'>;
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const imageInterceptorOptions = {
+  limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+  fileFilter: (
+    _req: unknown,
+    file: { mimetype: string },
+    cb: (error: Error | null, accept: boolean) => void,
+  ) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+  },
+};
 
 @ApiTags('menu')
 @Controller()
@@ -147,6 +170,8 @@ export class MenuController {
 
   @Post('restaurant/:restaurantId/menu/product')
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProductDto })
   @ApiOperation({
     summary: 'Crear un nuevo producto en el menú de un restaurante',
   })
@@ -172,15 +197,23 @@ export class MenuController {
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
   @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
+  @UseInterceptors(FileInterceptor('image', imageInterceptorOptions))
   async createProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Body() createProductDto: CreateProductDto,
+    @UploadedFile() image?: UploadedImage,
   ): Promise<ProductDto> {
-    return await this.menuService.createProduct(restaurantId, createProductDto);
+    return await this.menuService.createProduct(
+      restaurantId,
+      createProductDto,
+      image,
+    );
   }
 
   @Patch('restaurant/:restaurantId/menu/product/:productId')
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateProductDto })
   @ApiOperation({
     summary: 'Actualizar un producto del menú de un restaurante',
   })
@@ -207,15 +240,18 @@ export class MenuController {
   })
   @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
   @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
+  @UseInterceptors(FileInterceptor('image', imageInterceptorOptions))
   async updateProduct(
     @Param('restaurantId', ParseIntPipe) restaurantId: number,
     @Param('productId', ParseIntPipe) productId: number,
     @Body() updateProductDto: UpdateProductDto,
+    @UploadedFile() image?: UploadedImage,
   ): Promise<ProductDto> {
     return await this.menuService.updateProduct(
       restaurantId,
       productId,
       updateProductDto,
+      image,
     );
   }
 

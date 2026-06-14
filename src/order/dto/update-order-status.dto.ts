@@ -6,7 +6,8 @@ export class UpdateOrderStatusDto {
   @ApiProperty({
     example: 'IN_PROCESS',
     enum: RestaurantOrderStatus,
-    description: 'Valid transitions: PENDING→IN_PROCESS, PENDING→CANCELLED, IN_PROCESS→DELIVERED',
+    description:
+      'Valid transitions: PENDING→IN_PROCESS, PENDING→CANCELLED, IN_PROCESS→DELIVERED',
   })
   @IsEnum(RestaurantOrderStatus, {
     message: `status must be one of: ${Object.values(RestaurantOrderStatus).join(', ')}`,

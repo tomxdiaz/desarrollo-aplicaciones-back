@@ -7,4 +7,3 @@ export class UpdateStaffRoleDto {
   @IsEnum(RestaurantStaffRole)
   role!: RestaurantStaffRole;
 }
-
