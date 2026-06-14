@@ -255,6 +255,46 @@ export class MenuController {
     );
   }
 
+  @Patch('restaurant/:restaurantId/menu/product/:productId')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Actualizar un producto del menú de un restaurante',
+  })
+  @ApiOkResponse({
+    description: 'Producto actualizado correctamente',
+    type: ProductDto,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'restaurantId o productId inválido, cuerpo vacío o datos inválidos para actualizar el producto',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Token inválido, expirado o no enviado',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'El usuario no tiene permisos suficientes en este restaurante, o la categoría no pertenece a este menú',
+  })
+  @ApiNotFoundResponse({
+    description: 'Restaurante, menú, producto o categoría no encontrada',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Error inesperado del servidor',
+  })
+  @UseGuards(SupabaseAuthGuard, RestaurantRolesGuard)
+  @RestaurantRoles(RestaurantStaffRole.ADMIN, RestaurantStaffRole.CASHIER_PLUS)
+  async updateProduct(
+    @Param('restaurantId', ParseIntPipe) restaurantId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+    @Body() updateProductDto: UpdateProductDto,
+  ): Promise<ProductDto> {
+    return await this.menuService.updateProduct(
+      restaurantId,
+      productId,
+      updateProductDto,
+    );
+  }
+
   @Delete('restaurant/:restaurantId/menu/product/:productId')
   @ApiOperation({
     summary:

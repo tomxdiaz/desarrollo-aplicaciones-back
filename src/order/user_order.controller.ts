@@ -24,7 +24,7 @@ import { Tables } from '../supabase/database.types';
 type AppUser = Tables<'app_user'>;
 
 @ApiTags('orders')
-@Controller('orders')
+@Controller('restaurants/:restaurantId/orders')
 export class UserOrderController {
   constructor(private readonly orderService: OrderService) {}
 
