@@ -24,7 +24,7 @@ import { Tables } from '../supabase/database.types';
 type AppUser = Tables<'app_user'>;
 
 @ApiTags('orders')
-@Controller('restaurants/:restaurantId/orders')
+@Controller('orders')
 export class UserOrderController {
   constructor(private readonly orderService: OrderService) {}
 
@@ -46,6 +46,7 @@ export class UserOrderController {
   })
   @UseGuards(SupabaseAuthGuard)
   async findMine(@CurrentAppUser appUser: AppUser): Promise<OrderDto[]> {
+    console.log(`User ${appUser.id} is fetching their orders`);
     return await this.orderService.findMine(appUser.id);
   }
 
