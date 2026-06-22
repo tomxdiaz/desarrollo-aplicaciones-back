@@ -206,6 +206,7 @@ export class OrderService {
         user_id: userId,
         number: (count ?? 0) + 1,
         status: RestaurantOrderStatus.PENDING,
+        payment_method: dto.payment_method,
         total,
         note: dto.note,
       })
@@ -606,6 +607,7 @@ export class OrderService {
       user_id: order.user_id,
       number: order.number,
       status: order.status,
+      payment_method: order.payment_method,
       total: order.total,
       created_at: order.created_at,
       items: items.map((i) => ({

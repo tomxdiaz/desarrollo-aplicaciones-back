@@ -230,6 +230,7 @@ export type Database = {
           id: number;
           note: string | null;
           number: number;
+          payment_method: Database['public']['Enums']['payment_method'];
           restaurant_id: number;
           status: Database['public']['Enums']['restaurant_order_status'];
           table_id: number;
@@ -241,6 +242,7 @@ export type Database = {
           id?: never;
           note?: string | null;
           number: number;
+          payment_method?: Database['public']['Enums']['payment_method'];
           restaurant_id: number;
           status?: Database['public']['Enums']['restaurant_order_status'];
           table_id: number;
@@ -252,6 +254,7 @@ export type Database = {
           id?: never;
           note?: string | null;
           number?: number;
+          payment_method?: Database['public']['Enums']['payment_method'];
           restaurant_id?: number;
           status?: Database['public']['Enums']['restaurant_order_status'];
           table_id?: number;
@@ -362,6 +365,7 @@ export type Database = {
     };
     Enums: {
       global_role: 'SUPER_USER' | 'OWNER' | 'USER';
+      payment_method: 'CASH' | 'CARD' | 'WALLET';
       restaurant_order_status:
         | 'PENDING'
         | 'IN_PROCESS'
