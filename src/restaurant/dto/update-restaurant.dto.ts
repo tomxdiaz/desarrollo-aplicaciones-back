@@ -1,20 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class UpdateRestaurantDto {
   @ApiProperty({ example: 'La Esquina' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(40)
   name!: string;
 
   @ApiPropertyOptional({ example: 'Parrilla', nullable: true })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   description?: string | null;
 
   @ApiPropertyOptional({ example: 'Av. Siempre Viva 123', nullable: true })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   address?: string | null;
 
   @ApiPropertyOptional({

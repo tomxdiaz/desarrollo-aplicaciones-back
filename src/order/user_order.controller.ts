@@ -46,7 +46,6 @@ export class UserOrderController {
   })
   @UseGuards(SupabaseAuthGuard)
   async findMine(@CurrentAppUser appUser: AppUser): Promise<OrderDto[]> {
-    console.log(`User ${appUser.id} is fetching their orders`);
     return await this.orderService.findMine(appUser.id);
   }
 

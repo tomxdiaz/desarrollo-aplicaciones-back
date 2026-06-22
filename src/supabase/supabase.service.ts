@@ -82,7 +82,9 @@ export class SupabaseService {
       });
 
       if (error) {
-        this.logger.error(`Error uploading image to storage: ${error.message}`);
+        this.logger.error(
+          `Error uploading image to storage: ${error.message} (status: ${(error as any).statusCode ?? 'unknown'}, error: ${JSON.stringify(error)})`,
+        );
         throw new InternalServerErrorException(
           'Error inesperado al subir las imágenes',
         );

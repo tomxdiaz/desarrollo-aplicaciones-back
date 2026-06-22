@@ -8,6 +8,7 @@ import {
   IsPositive,
   IsString,
   IsUrl,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -27,6 +28,7 @@ export class CreateProductDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(40)
   name!: string;
 
   @ApiPropertyOptional({
@@ -35,6 +37,7 @@ export class CreateProductDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   description?: string;
 
   @ApiProperty({
